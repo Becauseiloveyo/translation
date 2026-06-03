@@ -1,0 +1,14 @@
+{
+  "sources": [
+    {
+      "name": "Example personal CSV source",
+      "type": "download",
+      "url": "https://example.invalid/my-personal-dictionary.csv",
+      "format": "csv",
+      "enabled": false,
+      "autoUpdate": false
+    }
+  ],
+  "notice": "Use fake or personal URLs only. Do not commit commercial dictionary data, scraped content, API keys, or local dictionary source files."
+}
+

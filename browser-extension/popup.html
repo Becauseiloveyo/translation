@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LiteDict</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">LiteDict</div>
+          <h1>划词翻译</h1>
+        </div>
+        <button id="openOptions" class="icon-button" type="button" title="设置">⚙</button>
+      </header>
+
+      <label class="field">
+        <span>文本</span>
+        <textarea id="sourceText" placeholder="选中文本后打开插件，或直接输入文本"></textarea>
+      </label>
+
+      <div class="controls">
+        <select id="targetLang">
+          <option value="zh">中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+        </select>
+        <button id="translateButton" class="primary" type="button">翻译</button>
+      </div>
+
+      <section class="result">
+        <div class="result-head">
+          <span id="providerName">Mock Provider</span>
+          <button id="copyButton" type="button">复制</button>
+        </div>
+        <div id="resultText" class="result-text">等待输入</div>
+      </section>
+
+      <div id="status" class="status"></div>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
+

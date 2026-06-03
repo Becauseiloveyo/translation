@@ -1,0 +1,378 @@
+import { PlugZap, Plus, Save, Trash2 } from "lucide-react";
+import { FormEvent, useMemo, useState } from "react";
+import { EmptyState } from "../components/EmptyState";
+import { PageHeader } from "../components/PageHeader";
+import { resetStore, upsertProvider } from "../services/storage/localStore";
+import { PageProps } from "../types/app";
+import { ApiProvider, AppSettings, ProviderPurpose, ProviderType } from "../types/models";
+import { createId, nowIso } from "../utils/id";
+
+type ProviderForm = {
+  id?: string;
+  name: string;
+  type: ProviderType;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  enabled: boolean;
+  priority: number;
+  defaultTargetLang: string;
+  useFor: ProviderPurpose[];
+};
+
+const emptyProviderForm: ProviderForm = {
+  name: "",
+  type: "openai",
+  baseUrl: "",
+  apiKey: "",
+  model: "",
+  enabled: true,
+  priority: 20,
+  defaultTargetLang: "zh",
+  useFor: ["translate"]
+};
+
+const purposes: ProviderPurpose[] = ["translate", "dictionary", "explain", "ocr"];
+
+export function SettingsPage({ store, setStore }: PageProps) {
+  const [providerForm, setProviderForm] = useState<ProviderForm>(emptyProviderForm);
+  const [testMessage, setTestMessage] = useState("");
+
+  const sortedProviders = useMemo(
+    () => [...store.apiProviders].sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name)),
+    [store.apiProviders]
+  );
+
+  function updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
+    setStore((current) => ({
+      ...current,
+      settings: {
+        ...current.settings,
+        [key]: value
+      }
+    }));
+  }
+
+  function saveProvider(event: FormEvent) {
+    event.preventDefault();
+    if (!providerForm.name.trim()) {
+      return;
+    }
+    const now = nowIso();
+    const existing = providerForm.id ? store.apiProviders.find((provider) => provider.id === providerForm.id) : undefined;
+    const provider: ApiProvider = {
+      id: providerForm.id ?? createId("provider"),
+      name: providerForm.name.trim(),
+      type: providerForm.type,
+      baseUrl: providerForm.baseUrl.trim() || undefined,
+      apiKeyEncrypted: providerForm.apiKey.trim() || existing?.apiKeyEncrypted,
+      model: providerForm.model.trim() || undefined,
+      enabled: providerForm.enabled,
+      priority: providerForm.priority,
+      useFor: providerForm.useFor,
+      defaultTargetLang: providerForm.defaultTargetLang.trim() || undefined,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now
+    };
+    setStore((current) => upsertProvider(current, provider));
+    setProviderForm(emptyProviderForm);
+  }
+
+  function editProvider(provider: ApiProvider) {
+    setProviderForm({
+      id: provider.id,
+      name: provider.name,
+      type: provider.type,
+      baseUrl: provider.baseUrl ?? "",
+      apiKey: "",
+      model: provider.model ?? "",
+      enabled: provider.enabled,
+      priority: provider.priority,
+      defaultTargetLang: provider.defaultTargetLang ?? "",
+      useFor: provider.useFor
+    });
+    setTestMessage("");
+  }
+
+  function deleteProvider(id: string) {
+    if (id === "provider_mock") {
+      return;
+    }
+    setStore((current) => ({
+      ...current,
+      apiProviders: current.apiProviders.filter((provider) => provider.id !== id)
+    }));
+  }
+
+  async function testProvider(provider: ApiProvider) {
+    setTestMessage("");
+    if (provider.type === "mock") {
+      setTestMessage("Mock Provider 可用。");
+      return;
+    }
+    if (provider.type !== "openai") {
+      setTestMessage(`${provider.name} 仍是占位适配器。`);
+      return;
+    }
+    if (!provider.baseUrl || !provider.apiKeyEncrypted || !provider.model) {
+      setTestMessage("缺少 base URL、API key 或 model。");
+      return;
+    }
+    try {
+      const baseUrl = provider.baseUrl.replace(/\/+$/, "");
+      const response = await fetch(`${baseUrl}/models`, {
+        headers: {
+          Authorization: `Bearer ${provider.apiKeyEncrypted}`
+        }
+      });
+      setTestMessage(response.ok ? "连接测试成功。" : `连接测试返回 HTTP ${response.status}。`);
+    } catch (caught) {
+      setTestMessage(`连接测试失败：${(caught as Error).message}`);
+    }
+  }
+
+  return (
+    <section className="page">
+      <PageHeader
+        eyebrow="Settings"
+        title="设置"
+        actions={
+          <button className="button danger" type="button" onClick={() => setStore(resetStore())}>
+            重置本地数据
+          </button>
+        }
+      />
+
+      <div className="grid-two">
+        <div className="panel pad stack">
+          <div className="panel-title">偏好</div>
+          <div className="grid-two">
+            <div className="field">
+              <label htmlFor="theme">主题</label>
+              <select id="theme" className="select" value={store.settings.theme} onChange={(event) => updateSetting("theme", event.target.value as AppSettings["theme"])}>
+                <option value="system">system</option>
+                <option value="light">light</option>
+                <option value="dark">dark</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="auto-history">历史</label>
+              <select
+                id="auto-history"
+                className="select"
+                value={store.settings.autoSaveHistory ? "true" : "false"}
+                onChange={(event) => updateSetting("autoSaveHistory", event.target.value === "true")}
+              >
+                <option value="true">自动保存</option>
+                <option value="false">不自动保存</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid-two">
+            <div className="field">
+              <label htmlFor="default-source">默认源语言</label>
+              <input
+                id="default-source"
+                className="input"
+                value={store.settings.defaultSourceLang}
+                onChange={(event) => updateSetting("defaultSourceLang", event.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="default-target">默认目标语言</label>
+              <input
+                id="default-target"
+                className="input"
+                value={store.settings.defaultTargetLang}
+                onChange={(event) => updateSetting("defaultTargetLang", event.target.value)}
+              />
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="local-folder">本地词典文件夹</label>
+            <input
+              id="local-folder"
+              className="input"
+              value={store.settings.localDictionaryFolder}
+              onChange={(event) => updateSetting("localDictionaryFolder", event.target.value)}
+            />
+          </div>
+          <div className="notice">API key 当前仅写入本地应用数据。加密存储会在 SQLite/Tauri 存储层接入时完成。</div>
+        </div>
+
+        <form className="panel pad stack" onSubmit={saveProvider}>
+          <div className="item-head">
+            <div className="panel-title">{providerForm.id ? "编辑 Provider" : "新增 Provider"}</div>
+            {providerForm.id ? (
+              <button className="button" type="button" onClick={() => setProviderForm(emptyProviderForm)}>
+                <Plus size={16} aria-hidden="true" />
+                新增
+              </button>
+            ) : null}
+          </div>
+          <div className="grid-two">
+            <div className="field">
+              <label htmlFor="provider-name">名称</label>
+              <input
+                id="provider-name"
+                className="input"
+                value={providerForm.name}
+                onChange={(event) => setProviderForm({ ...providerForm, name: event.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="provider-type">类型</label>
+              <select
+                id="provider-type"
+                className="select"
+                value={providerForm.type}
+                onChange={(event) => setProviderForm({ ...providerForm, type: event.target.value as ProviderType })}
+              >
+                <option value="openai">openai</option>
+                <option value="deepl">deepl</option>
+                <option value="google">google</option>
+                <option value="oxford">oxford</option>
+                <option value="custom">custom</option>
+                <option value="mock">mock</option>
+              </select>
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="provider-base">Base URL</label>
+            <input
+              id="provider-base"
+              className="input"
+              value={providerForm.baseUrl}
+              onChange={(event) => setProviderForm({ ...providerForm, baseUrl: event.target.value })}
+              placeholder="https://api.example.invalid/v1"
+            />
+          </div>
+          <div className="grid-two">
+            <div className="field">
+              <label htmlFor="provider-key">API key</label>
+              <input
+                id="provider-key"
+                className="input"
+                type="password"
+                value={providerForm.apiKey}
+                onChange={(event) => setProviderForm({ ...providerForm, apiKey: event.target.value })}
+                placeholder={providerForm.id ? "留空保留原 key" : ""}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="provider-model">Model</label>
+              <input
+                id="provider-model"
+                className="input"
+                value={providerForm.model}
+                onChange={(event) => setProviderForm({ ...providerForm, model: event.target.value })}
+              />
+            </div>
+          </div>
+          <div className="grid-three">
+            <div className="field">
+              <label htmlFor="provider-priority">优先级</label>
+              <input
+                id="provider-priority"
+                className="input"
+                type="number"
+                value={providerForm.priority}
+                onChange={(event) => setProviderForm({ ...providerForm, priority: Number(event.target.value) })}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="provider-target">默认目标</label>
+              <input
+                id="provider-target"
+                className="input"
+                value={providerForm.defaultTargetLang}
+                onChange={(event) => setProviderForm({ ...providerForm, defaultTargetLang: event.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="provider-enabled">状态</label>
+              <select
+                id="provider-enabled"
+                className="select"
+                value={providerForm.enabled ? "true" : "false"}
+                onChange={(event) => setProviderForm({ ...providerForm, enabled: event.target.value === "true" })}
+              >
+                <option value="true">enabled</option>
+                <option value="false">disabled</option>
+              </select>
+            </div>
+          </div>
+          <div className="stack" style={{ gap: 6 }}>
+            <div className="label">用途</div>
+            <div className="row">
+              {purposes.map((purpose) => (
+                <label className="chip" key={purpose}>
+                  <input
+                    type="checkbox"
+                    checked={providerForm.useFor.includes(purpose)}
+                    onChange={(event) => {
+                      const useFor = event.target.checked
+                        ? [...providerForm.useFor, purpose]
+                        : providerForm.useFor.filter((item) => item !== purpose);
+                      setProviderForm({ ...providerForm, useFor });
+                    }}
+                  />
+                  {purpose}
+                </label>
+              ))}
+            </div>
+          </div>
+          <button className="button primary" type="submit">
+            <Save size={16} aria-hidden="true" />
+            保存 Provider
+          </button>
+        </form>
+      </div>
+
+      <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel-header">
+          <div className="panel-title">Providers</div>
+          <span className="chip">{store.apiProviders.length}</span>
+        </div>
+        {testMessage ? <div className="pad"><div className="notice">{testMessage}</div></div> : null}
+        {sortedProviders.length ? (
+          <div className="list">
+            {sortedProviders.map((provider) => (
+              <div className="list-item" key={provider.id}>
+                <div className="item-head">
+                  <button className="link-button" type="button" onClick={() => editProvider(provider)}>
+                    <div className="item-title">{provider.name}</div>
+                    <div className="muted small">
+                      {provider.type} · P{provider.priority} · {provider.useFor.join(", ")}
+                      {provider.apiKeyEncrypted ? " · key saved" : ""}
+                    </div>
+                  </button>
+                  <div className="row">
+                    <span className={provider.enabled ? "chip good" : "chip"}>{provider.enabled ? "enabled" : "disabled"}</span>
+                    <button className="button" type="button" onClick={() => void testProvider(provider)}>
+                      <PlugZap size={16} aria-hidden="true" />
+                      测试
+                    </button>
+                    <button
+                      className="button icon danger"
+                      type="button"
+                      onClick={() => deleteProvider(provider.id)}
+                      disabled={provider.id === "provider_mock"}
+                      title="删除"
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="pad">
+            <EmptyState title="暂无 Provider" />
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}

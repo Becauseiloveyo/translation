@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "LiteDict Translator",
+  "description": "Local-first personal translation helper for Chrome and Edge on Windows.",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "LiteDict",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "permissions": ["activeTab", "contextMenus", "storage"],
+  "host_permissions": ["<all_urls>"]
+}
+
