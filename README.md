@@ -1,132 +1,199 @@
 # LiteDict
 
-LiteDict 鏄竴涓湰鍦颁紭鍏堢殑涓汉缈昏瘧璇嶅吀搴旂敤銆傜洰鏍囨槸鍋氫竴涓共鍑€銆佽交閲忋€佹棤骞垮憡銆佹棤闇€鐧诲綍鐨勭炕璇戝拰璇嶅吀宸ュ叿锛屾敮鎸佽嚜甯?API銆佽嚜甯﹁瘝鍏搞€佽嚜瀹氫箟鏈琛ㄥ拰璇嶆眹鏈€?
-## 椤圭洰鐘舵€?
-褰撳墠浠撳簱鍖呭惈锛?
-- React + TypeScript + Vite 鍓嶇搴旂敤
-- Tauri 2 妗岄潰绔伐绋?- Capacitor Android 宸ョ▼
-- Chrome / Edge 娴忚鍣ㄦ彃浠?- Mock 缈昏瘧 Provider
-- OpenAI-compatible 缈昏瘧 Provider
-- Mock 璇嶅吀 Provider
-- 鏈湴瀵煎叆璇嶅吀鏌ヨ
-- 璇嶆眹鏈€佹湳璇〃銆佺炕璇戝巻鍙?- CSV / TSV / JSON / TXT 璇嶅吀瀵煎叆棰勮鍜屽瓧娈垫槧灏?
-## 鏍稿績鍘熷垯
+LiteDict 是一个本地优先的个人翻译词典应用。目标是做一个干净、轻量、无广告、无需登录的翻译和词典工具，支持自带 API、自带词典、自定义术语表和词汇本。
 
-- 鏃犲箍鍛?- 鏃犱細鍛樺脊绐?- 鏃犺绋嬫帹鑽?- 鏃犲己鍒剁櫥褰?- 鏈湴浼樺厛
-- 涓嶅唴缃晢涓氳瘝鍏告暟鎹?- 涓嶆彁浜?API key
-- 鐢ㄦ埛鑷繁閰嶇疆 API 鍜屽鍏ュ悎娉曞彇寰楃殑璇嶅吀
+## 项目状态
 
-## 鏈湴寮€鍙?
-瀹夎渚濊禆锛?
+当前仓库包含：
+
+- React + TypeScript + Vite 前端应用
+- Tauri 2 桌面端工程
+- Capacitor Android 工程
+- Chrome / Edge 浏览器插件
+- Mock 翻译 Provider
+- OpenAI-compatible 翻译 Provider
+- Mock 词典 Provider
+- 本地导入词典查询
+- 词汇本、术语表、翻译历史
+- CSV / TSV / JSON / TXT 词典导入预览和字段映射
+
+## 核心原则
+
+- 无广告
+- 无会员弹窗
+- 无课程推荐
+- 无强制登录
+- 本地优先
+- 不内置商业词典数据
+- 不提交 API key
+- 用户自己配置 API 和导入合法取得的词典
+
+## 本地开发
+
+安装依赖：
+
 ```bash
 npm install
 ```
 
-鍚姩 Web 寮€鍙戞湇鍔★細
+启动 Web 开发服务：
 
 ```bash
 npm run dev
 ```
 
-鏋勫缓鍓嶇锛?
+构建前端：
+
 ```bash
 npm run build
 ```
 
-## 妗岄潰绔?
-妗岄潰绔娇鐢?Tauri銆?
-寮€鍙戣繍琛岋細
+## 桌面端
+
+桌面端使用 Tauri。
+
+开发运行：
 
 ```bash
 npm run tauri:dev
 ```
 
-鎵撳寘妗岄潰搴旂敤锛?
+打包桌面应用：
+
 ```bash
 npm run tauri:build
 ```
 
-娉ㄦ剰锛歍auri 闇€瑕佸厛瀹夎 Rust銆丆argo 鍜?Windows C++ 鏋勫缓宸ュ叿銆?
-## Android 搴旂敤
+注意：Tauri 需要先安装 Rust、Cargo 和 Windows C++ 构建工具。
 
-Android 绔娇鐢?Capacitor 澶嶇敤褰撳墠鍓嶇搴旂敤锛屽伐绋嬬洰褰曞湪 `android/`銆?
-鍚屾鍓嶇璧勬簮鍒?Android锛?
+## Android 应用
+
+Android 端使用 Capacitor 复用当前前端应用，工程目录在 `android/`。
+
+同步前端资源到 Android：
+
 ```bash
 npm run android:sync
 ```
 
-鐢熸垚 Debug APK锛?
+生成 Debug APK：
+
 ```bash
+cd android
+./gradlew assembleDebug
+```
+
+在 Windows PowerShell 中也可以运行：
+
+```powershell
 cd android
 .\gradlew.bat assembleDebug
 ```
 
-APK 鐢熸垚鍚庨€氬父浣嶄簬锛?
+APK 生成后通常位于：
+
 ```text
 android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-褰撳墠杩欏彴 Windows 鏈哄櫒涓婏紝Android 宸ョ▼鍜?SDK 宸茬敓鎴愭垚鍔燂紝浣?APK 鏋勫缓琚?Gradle 涓嬭浇 AndroidX / Maven 渚濊禆瓒呮椂闃诲銆傚彲浠ョ敤 Android Studio 鎵撳紑 `android/`锛屾垨鍦?Google Maven / Maven Central 缃戠粶绋冲畾鐨勭幆澧冧腑缁х画鎵ц Gradle 鏋勫缓銆?
-## 娴忚鍣ㄦ彃浠?
-Chrome / Edge 鎻掍欢浣嶄簬 `browser-extension/`锛屼娇鐢?Manifest V3銆?
-鏈湴瀹夎鏂瑰紡锛?
-1. 鎵撳紑 `chrome://extensions` 鎴?`edge://extensions`
-2. 寮€鍚紑鍙戣€呮ā寮?3. 鐐瑰嚮鈥滃姞杞藉凡瑙ｅ帇鐨勬墿灞曠▼搴忊€?4. 閫夋嫨 `browser-extension` 鏂囦欢澶?
-鎻掍欢鍔熻兘锛?
-- 璇诲彇缃戦〉閫変腑鏂囨湰
-- 榛樿浣跨敤 Mock Provider 缈昏瘧
-- 鍙湪鎻掍欢璁剧疆椤甸厤缃?OpenAI-compatible Provider
-- 璁剧疆鍜屽巻鍙蹭繚瀛樺湪娴忚鍣ㄦ湰鍦板瓨鍌?
-## 璇嶅吀瀵煎叆
+如果本地 Gradle 下载 AndroidX / Maven 依赖超时，可以用 Android Studio 打开 `android/` 后构建，或换到 Google Maven / Maven Central 网络稳定的环境继续执行 Gradle。
 
-LiteDict 涓嶅寘鍚湡瀹炲晢涓氳瘝鍏告暟鎹€傜敤鎴峰彲浠ヨ嚜琛屽鍏ュ悎娉曞彇寰楃殑璇嶅吀鏂囦欢銆?
-褰撳墠鏀寔锛?
+## 浏览器插件
+
+Chrome / Edge 插件位于 `browser-extension/`，使用 Manifest V3。
+
+本地安装方式：
+
+1. 打开 `chrome://extensions` 或 `edge://extensions`
+2. 开启开发者模式
+3. 点击“加载已解压的扩展程序”
+4. 选择 `browser-extension` 文件夹
+
+插件功能：
+
+- 读取网页选中文本
+- 默认使用 Mock Provider 翻译
+- 可在插件设置页配置 OpenAI-compatible Provider
+- 设置和历史保存在浏览器本地存储
+
+## GitHub 发行版
+
+发行版会把 Android 和浏览器插件分开放：
+
+- `litedict-browser-extension-*.zip`：Chrome / Edge 插件包
+- `litedict-android-project-*.zip`：Android 工程包
+- `litedict-android-debug-*.apk`：如果 GitHub Actions 成功完成 Android 构建，会附带 Debug APK
+
+## 词典导入
+
+LiteDict 不包含真实商业词典数据。用户可以自行导入合法取得的词典文件。
+
+当前支持：
+
 - CSV
 - TSV
 - JSON
 - TXT
 
-绀轰緥婧愰厤缃锛?
+示例源配置见：
+
 ```text
 dictionary_sources.example.json
 ```
 
-涓汉鏈湴婧愰厤缃鏀惧湪锛?
+个人本地源配置请放在：
+
 ```text
 dictionary_sources.local.json
 ```
 
-璇ユ枃浠跺凡琚?`.gitignore` 蹇界暐锛屼笉搴旀彁浜ゃ€?
-## Provider 閰嶇疆
+该文件已被 `.gitignore` 忽略，不应提交。
 
-鏀寔 OpenAI-compatible Chat Completions API锛?
+## Provider 配置
+
+支持 OpenAI-compatible Chat Completions API：
+
 - Base URL
 - API Key
 - Model
-- 榛樿鐩爣璇█
-- Provider 鍚敤鐘舵€佸拰浼樺厛绾?
-涓嶈鎶婄湡瀹?API key 鍐欏叆浠撳簱銆俙.env.example` 浠呬綔涓虹ず渚嬨€?
-## 闅愮鍜屾暟鎹?
-LiteDict 榛樿鏈湴浼樺厛銆傝瘝姹囨湰銆佹湳璇〃銆佺炕璇戝巻鍙层€丳rovider 璁剧疆鍜屽鍏ヨ瘝鍏告潯鐩粯璁や繚瀛樺湪鏈湴銆?
-褰撳墠 v1 鐨勬湰鍦版寔涔呭寲浣跨敤娴忚鍣?/ WebView 鏈湴瀛樺偍閫傞厤鍣ㄣ€傚悗缁増鏈鍒掕縼绉诲埌 SQLite锛屽苟琛ュ厖 API key 鍔犲瘑瀛樺偍銆?
-## 鏁版嵁鐗堟潈澹版槑
+- 默认目标语言
+- Provider 启用状态和优先级
 
-鏈」鐩笉鍖呭惈浠讳綍鍙楃増鏉冧繚鎶ょ殑鍟嗕笟璇嶅吀鏁版嵁銆佸晢涓氳瘝鍏搁煶棰戙€佹姄鍙栬瘝鍏稿唴瀹规垨绗笁鏂瑰搧鐗岀礌鏉愩€?
-鐢ㄦ埛闇€瑕佽嚜琛岃礋璐ｅ悎娉曡幏鍙栧拰瀵煎叆鎵€浣跨敤鐨勮瘝鍏告暟鎹€丄PI 鍑嵁鍜屽叾浠栬祫婧愩€?
-涓嶈鎻愪氦锛?
+不要把真实 API key 写入仓库。`.env.example` 仅作为示例。
+
+## 隐私和数据
+
+LiteDict 默认本地优先。词汇本、术语表、翻译历史、Provider 设置和导入词典条目默认保存在本地。
+
+当前 v1 的本地持久化使用浏览器 / WebView 本地存储适配器。后续版本计划迁移到 SQLite，并补充 API key 加密存储。
+
+## 数据版权声明
+
+本项目不包含任何受版权保护的商业词典数据、商业词典音频、抓取词典内容或第三方品牌素材。
+
+用户需要自行负责合法获取和导入所使用的词典数据、API 凭据和其他资源。
+
+不要提交：
+
 - API key
 - `.env`
-- 鏈湴鏁版嵁搴?- 瀵煎叆璇嶅吀鏁版嵁
-- 璇嶅吀缂撳瓨
-- 鍟嗕笟璇嶅吀鏁版嵁
-- 鎶撳彇鏁版嵁
-- 鍟嗕笟璇嶅吀闊抽
-- 绗笁鏂?Logo 鎴栧搧鐗岃祫浜?
-## 鍚庣画璁″垝
+- 本地数据库
+- 导入词典数据
+- 词典缓存
+- 商业词典数据
+- 抓取数据
+- 商业词典音频
+- 第三方 Logo 或品牌资产
 
-- SQLite 鏈湴鏁版嵁搴?- API key 鍔犲瘑瀛樺偍
-- Android APK / Release 鍖呯ǔ瀹氭瀯寤?- StarDict / MDX / MDD 瀵煎叆
-- 鎴浘缈昏瘧鍜?OCR
-- 鍒掕瘝寮圭獥
-- 鍏ㄥ眬蹇嵎閿?- 澶?Provider 瀵规瘮
-- Anki 瀵煎嚭
+## 后续计划
+
+- SQLite 本地数据库
+- API key 加密存储
+- Android APK / Release 包稳定构建
+- StarDict / MDX / MDD 导入
+- 截图翻译和 OCR
+- 划词弹窗
+- 全局快捷键
+- 多 Provider 对比
+- Anki 导出
+

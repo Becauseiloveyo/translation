@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Sync Android project
+        run: npx cap sync android
+
+      - name: Prepare separated release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          mkdir -p release-assets
+          (cd browser-extension && zip -r "../release-assets/litedict-browser-extension-${TAG}.zip" .)
+          zip -r "release-assets/litedict-android-project-${TAG}.zip" \
+            android capacitor.config.ts package.json package-lock.json src index.html vite.config.ts \
+            tsconfig.json tsconfig.node.json tailwind.config.ts postcss.config.js README.md \
+            -x "android/.gradle/*" "android/app/build/*" "android/local.properties"
+
+      - name: Build Android debug APK
+        id: android_build
+        continue-on-error: true
+        shell: bash
+        run: |
+          chmod +x android/gradlew
+          (cd android && ./gradlew assembleDebug)
+
+      - name: Copy Android APK when available
+        if: always()
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ -f "$APK" ]; then
+            cp "$APK" "release-assets/litedict-android-debug-${TAG}.apk"
+          else
+            echo "Android APK was not produced; uploading Android project zip only."
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          NOTES=$(cat <<'NOTES'
+          LiteDict personal translation dictionary release.
+
+          Assets:
+          - litedict-browser-extension-*.zip: Chrome / Edge browser extension.
+          - litedict-android-project-*.zip: Android project package for Android Studio.
+          - litedict-android-debug-*.apk: Debug APK, included only if Android build succeeds.
+
+          This project does not bundle commercial dictionary data, API keys, or third-party brand assets.
+          NOTES
+          )
+          gh release create "$TAG" release-assets/* --title "LiteDict ${TAG}" --notes "$NOTES"
