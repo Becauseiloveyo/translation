@@ -8,40 +8,55 @@
   </head>
   <body>
     <main class="popup">
-      <header class="topbar">
+      <header class="popup-header">
         <div>
           <div class="eyebrow">LiteDict</div>
-          <h1>划词翻译</h1>
+          <h1>选中文本自动翻译</h1>
         </div>
-        <button id="openOptions" class="icon-button" type="button" title="设置">⚙</button>
+        <button id="openOptions" class="icon-button" type="button" title="设置" aria-label="打开设置">⚙</button>
       </header>
 
-      <label class="field">
-        <span>文本</span>
-        <textarea id="sourceText" placeholder="选中文本后打开插件，或直接输入文本"></textarea>
-      </label>
-
-      <div class="controls">
-        <select id="targetLang">
-          <option value="zh">中文</option>
-          <option value="en">English</option>
-          <option value="ja">日本語</option>
-          <option value="ko">한국어</option>
-        </select>
-        <button id="translateButton" class="primary" type="button">翻译</button>
+      <div class="popup-toolbar">
+        <label class="compact-field">
+          <span>目标语言</span>
+          <select id="targetLang">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+          </select>
+        </label>
+        <div class="provider-pill" id="providerName">Mock Provider</div>
       </div>
 
-      <section class="result">
-        <div class="result-head">
-          <span id="providerName">Mock Provider</span>
-          <button id="copyButton" type="button">复制</button>
-        </div>
-        <div id="resultText" class="result-text">等待输入</div>
+      <section class="popup-card">
+        <div class="card-title">原文</div>
+        <textarea id="sourceText" placeholder="选中网页文本后打开插件，或直接输入要翻译的内容"></textarea>
       </section>
 
-      <div id="status" class="status"></div>
+      <section class="popup-card result-card">
+        <div class="result-head">
+          <div class="card-title">译文</div>
+          <div class="result-actions">
+            <button id="translateButton" class="ghost" type="button">翻译</button>
+            <button id="copyButton" class="primary" type="button">复制</button>
+          </div>
+        </div>
+        <div id="resultText" class="result-text">译文会显示在这里</div>
+      </section>
+
+      <div id="status" class="status" aria-live="polite"></div>
+
+      <section class="history-section">
+        <div class="section-head">
+          <h2>最近翻译</h2>
+          <span id="historyCount">0</span>
+        </div>
+        <div id="historyList" class="history-list">
+          <div class="history-empty">暂无历史</div>
+        </div>
+      </section>
     </main>
     <script src="popup.js"></script>
   </body>
 </html>
-

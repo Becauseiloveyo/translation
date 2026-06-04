@@ -15,8 +15,11 @@ const openOptions = document.getElementById("openOptions");
 const resultText = document.getElementById("resultText");
 const providerName = document.getElementById("providerName");
 const statusText = document.getElementById("status");
+const historyList = document.getElementById("historyList");
+const historyCount = document.getElementById("historyCount");
 
 let latestResult = "";
+let debounceTimer = 0;
 
 init();
 
@@ -24,24 +27,40 @@ async function init() {
   const settings = await loadSettings();
   targetLang.value = settings.targetLang || "zh";
   providerName.textContent = settings.providerName || "Mock Provider";
+  await renderHistory();
 
   const selected = await readSelectedText();
   sourceText.value = selected || "";
   if (selected) {
-    await translate();
+    await translate("selection");
   }
 }
 
+sourceText.addEventListener("input", () => {
+  window.clearTimeout(debounceTimer);
+  debounceTimer = window.setTimeout(() => {
+    void translate("debounce");
+  }, 500);
+});
+
+targetLang.addEventListener("change", async () => {
+  await chrome.storage.local.set({ targetLang: targetLang.value });
+  if (sourceText.value.trim()) {
+    await translate("target-change");
+  }
+});
+
 translateButton.addEventListener("click", () => {
-  void translate();
+  void translate("manual");
 });
 
 copyButton.addEventListener("click", async () => {
   if (!latestResult) {
+    setStatus("没有可复制的译文", "muted");
     return;
   }
   await navigator.clipboard.writeText(latestResult);
-  setStatus("已复制");
+  setStatus("已复制", "success");
 });
 
 openOptions.addEventListener("click", () => {
@@ -54,11 +73,11 @@ async function readSelectedText() {
     try {
       const response = await chrome.tabs.sendMessage(tab.id, { type: "GET_SELECTION" });
       if (response?.text) {
-        chrome.storage.local.set({ lastSelection: response.text });
+        await chrome.storage.local.set({ lastSelection: response.text });
         return response.text;
       }
     } catch {
-      // Some browser pages do not accept content scripts.
+      // Browser internal pages and extension pages may not accept content scripts.
     }
   }
 
@@ -66,18 +85,18 @@ async function readSelectedText() {
   return data.lastSelection || "";
 }
 
-async function translate() {
+async function translate(trigger) {
   const text = sourceText.value.trim();
   if (!text) {
     latestResult = "";
-    resultText.textContent = "等待输入";
+    resultText.textContent = "译文会显示在这里";
     setStatus("");
     return;
   }
 
   const settings = await loadSettings();
   providerName.textContent = settings.providerName || "Mock Provider";
-  setStatus("翻译中");
+  setStatus(trigger === "selection" ? "已读取选中文本，翻译中" : "翻译中", "muted");
 
   try {
     const output =
@@ -86,11 +105,14 @@ async function translate() {
     resultText.textContent = output;
     setStatus("");
     await saveHistory(text, output, settings.providerName || "Mock Provider");
+    await renderHistory();
   } catch (error) {
     const fallback = mockTranslate(text, targetLang.value);
     latestResult = fallback;
     resultText.textContent = fallback;
-    setStatus(`已回退到 Mock：${error.message}`);
+    setStatus(`已回退到 Mock：${error.message}`, "warning");
+    await saveHistory(text, fallback, "Mock Provider");
+    await renderHistory();
   }
 }
 
@@ -146,17 +168,49 @@ async function loadSettings() {
 async function saveHistory(source, translated, provider) {
   const data = await chrome.storage.local.get("history");
   const history = Array.isArray(data.history) ? data.history : [];
-  history.unshift({
-    source,
-    translated,
-    provider,
-    targetLang: targetLang.value,
-    createdAt: new Date().toISOString()
-  });
-  await chrome.storage.local.set({ history: history.slice(0, 100) });
+  const next = [
+    {
+      source,
+      translated,
+      provider,
+      targetLang: targetLang.value,
+      createdAt: new Date().toISOString()
+    },
+    ...history.filter((item) => item.source !== source || item.translated !== translated)
+  ];
+  await chrome.storage.local.set({ history: next.slice(0, 100) });
 }
 
-function setStatus(text) {
+async function renderHistory() {
+  const data = await chrome.storage.local.get("history");
+  const history = Array.isArray(data.history) ? data.history.slice(0, 5) : [];
+  historyCount.textContent = String(history.length);
+
+  if (!history.length) {
+    historyList.innerHTML = '<div class="history-empty">暂无历史</div>';
+    return;
+  }
+
+  historyList.innerHTML = "";
+  for (const item of history) {
+    const button = document.createElement("button");
+    button.className = "history-item";
+    button.type = "button";
+    button.innerHTML = `
+      <span class="history-source"></span>
+      <span class="history-translated"></span>
+    `;
+    button.querySelector(".history-source").textContent = item.source || "";
+    button.querySelector(".history-translated").textContent = item.translated || "";
+    button.addEventListener("click", async () => {
+      sourceText.value = item.source || "";
+      await translate("history");
+    });
+    historyList.appendChild(button);
+  }
+}
+
+function setStatus(text, tone = "muted") {
   statusText.textContent = text;
+  statusText.dataset.tone = tone;
 }
-

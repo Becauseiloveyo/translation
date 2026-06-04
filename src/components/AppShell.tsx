@@ -18,11 +18,11 @@ type NavItem = {
   label: string;
   shortLabel?: string;
   icon: typeof Languages;
-  group: "primary" | "library" | "system";
+  group: "home" | "primary" | "library" | "system";
 };
 
 const navItems: NavItem[] = [
-  { id: "home", label: "首页", icon: Home, group: "primary" },
+  { id: "home", label: "首页", icon: Home, group: "home" },
   { id: "translate", label: "翻译", icon: Languages, group: "primary" },
   { id: "dictionary", label: "词典", icon: BookOpen, group: "primary" },
   { id: "vocabulary", label: "词汇本", shortLabel: "词汇", icon: Star, group: "primary" },
@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
   { id: "settings", label: "设置", icon: Settings, group: "system" }
 ];
 
-const mobileNav = navItems.filter((item) => ["home", "translate", "vocabulary", "dictionary", "settings"].includes(item.id));
+const mobileNav = navItems.filter((item) => ["home", "dictionary", "vocabulary", "history", "settings"].includes(item.id));
 
 type AppShellProps = {
   currentPage: PageKey;
@@ -46,7 +46,7 @@ export function AppShell({ currentPage, onPageChange, children }: AppShellProps)
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="桌面导航">
-        <div className="brand">
+        <button className="brand" type="button" onClick={() => onPageChange("home")}>
           <div className="brand-mark">
             <Library size={20} aria-hidden="true" />
           </div>
@@ -54,10 +54,10 @@ export function AppShell({ currentPage, onPageChange, children }: AppShellProps)
             <div className="brand-title">LiteDict</div>
             <div className="brand-subtitle">个人翻译词典</div>
           </div>
-        </div>
+        </button>
 
-        <NavGroup title="常用" items={navItems.filter((item) => item.group === "primary")} currentPage={currentPage} onPageChange={onPageChange} />
-        <NavGroup title="内容" items={navItems.filter((item) => item.group === "library")} currentPage={currentPage} onPageChange={onPageChange} />
+        <NavGroup title="主功能" items={navItems.filter((item) => item.group === "primary")} currentPage={currentPage} onPageChange={onPageChange} />
+        <NavGroup title="资料" items={navItems.filter((item) => item.group === "library")} currentPage={currentPage} onPageChange={onPageChange} />
         <NavGroup title="系统" items={navItems.filter((item) => item.group === "system")} currentPage={currentPage} onPageChange={onPageChange} />
       </aside>
 

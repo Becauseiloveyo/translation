@@ -1,7 +1,5 @@
-import { ArrowLeftRight, Copy, Eraser, Languages, Search, Star } from "lucide-react";
+import { ArrowLeftRight, Copy, Eraser, Languages, Search, Sparkles, Star } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
-import { EmptyState } from "../components/EmptyState";
-import { PageHeader } from "../components/PageHeader";
 import { lookupDictionary } from "../services/dictionary/localDictionaryProvider";
 import { translateWithProvider } from "../services/providers/registry";
 import { addHistory, upsertVocabulary } from "../services/storage/localStore";
@@ -19,7 +17,7 @@ type TranslateState = {
 };
 
 const languageOptions = [
-  { value: "auto", label: "自动" },
+  { value: "auto", label: "自动检测" },
   { value: "zh", label: "中文" },
   { value: "en", label: "English" },
   { value: "ja", label: "日本語" },
@@ -46,6 +44,10 @@ export function TranslatePage({ store, setStore }: PageProps) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    await runTranslateOrLookup();
+  }
+
+  async function runTranslateOrLookup() {
     const nextDetection = detectInput(text, sourceLang, targetLang);
     setError("");
     setTranslation(null);
@@ -142,26 +144,69 @@ export function TranslatePage({ store, setStore }: PageProps) {
 
   return (
     <section className="page translate-page">
-      <PageHeader
-        eyebrow="Translate"
-        title="翻译与查词"
-        actions={
-          <>
-            <button className="button icon" type="button" onClick={copyResult} title="复制结果" disabled={!resultText}>
-              <Copy size={16} aria-hidden="true" />
-            </button>
-            <button className="button icon" type="button" onClick={clearAll} title="清空">
-              <Eraser size={16} aria-hidden="true" />
-            </button>
-          </>
-        }
-      />
+      <header className="translate-titlebar">
+        <div>
+          <div className="eyebrow">Translate</div>
+          <h1>翻译与查词</h1>
+          <p>快速翻译、查词、术语匹配，并把有价值的结果保存到词汇本。</p>
+        </div>
+        <div className="page-actions">
+          <button className="button icon" type="button" onClick={copyResult} title="复制结果" disabled={!resultText}>
+            <Copy size={16} aria-hidden="true" />
+          </button>
+          <button className="button icon" type="button" onClick={clearAll} title="清空">
+            <Eraser size={16} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
 
-      <form className="translate-workspace" onSubmit={handleSubmit}>
-        <section className="panel pad stack translate-card">
-          <div className="translate-card-head">
-            <span className="chip good">{formatDetection(detection)}</span>
-            <select className="select compact-select" value={providerId} onChange={(event) => setProviderId(event.target.value)}>
+      <form className="translate-workbench" onSubmit={handleSubmit}>
+        <section className="panel translate-pane source-pane">
+          <div className="translate-pane-head">
+            <div>
+              <div className="pane-kicker">原文</div>
+              <select className="select lang-select" value={sourceLang} onChange={(event) => setSourceLang(event.target.value)}>
+                {languageOptions.map((option) => (
+                  <option value={option.value} key={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <span className="chip">{formatDetection(detection)}</span>
+          </div>
+          <textarea
+            className="textarea translate-input"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="输入或粘贴要翻译的文本"
+          />
+          <div className="translate-pane-foot">
+            <span className="muted small">{text.trim().length} 字</span>
+            <button className="button primary" type="submit" disabled={isLoading || detection.intent === "empty"}>
+              {detection.intent === "lookup" ? <Search size={17} aria-hidden="true" /> : <Languages size={17} aria-hidden="true" />}
+              {isLoading ? "处理中" : detection.intent === "lookup" ? "查词" : "翻译"}
+            </button>
+          </div>
+        </section>
+
+        <button className="button icon translate-swap" type="button" onClick={swapLanguages} title="交换语言">
+          <ArrowLeftRight size={18} aria-hidden="true" />
+        </button>
+
+        <section className="panel translate-pane output-pane">
+          <div className="translate-pane-head">
+            <div>
+              <div className="pane-kicker">译文</div>
+              <select className="select lang-select" value={targetLang} onChange={(event) => setTargetLang(event.target.value)}>
+                {languageOptions.map((option) => (
+                  <option value={option.value} key={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <select className="select provider-select" value={providerId} onChange={(event) => setProviderId(event.target.value)}>
               {providerOptions.map((provider) => (
                 <option value={provider.id} key={provider.id}>
                   {provider.name}
@@ -170,13 +215,37 @@ export function TranslatePage({ store, setStore }: PageProps) {
             </select>
           </div>
 
-          <textarea
-            className="textarea translate-input"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="输入单词、短语或句子"
-          />
+          <div className="translate-result-surface">
+            {translation ? <TranslationResultPanel result={translation} /> : null}
+            {dictionaryEntry ? <DictionaryResultPanel entry={dictionaryEntry} /> : null}
+            {!translation && !dictionaryEntry && !error ? (
+              <div className="translate-empty">
+                <Languages size={28} aria-hidden="true" />
+                <strong>译文会显示在这里</strong>
+                <span>单个英文词会优先查词，短语和句子会优先翻译。</span>
+              </div>
+            ) : null}
+          </div>
 
+          <div className="result-toolbar">
+            <div className="row">
+              {translation ? <span className="chip good">{translation.provider}</span> : null}
+              {dictionaryEntry ? <span className="chip good">{dictionaryEntry.source ?? "Dictionary"}</span> : null}
+            </div>
+            <div className="row">
+              <button className="button" type="button" onClick={copyResult} disabled={!resultText}>
+                <Copy size={16} aria-hidden="true" />
+                复制
+              </button>
+              <button className="button" type="button" onClick={saveResultToVocabulary} disabled={!resultText}>
+                <Star size={16} aria-hidden="true" />
+                收藏
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="translate-below">
           <div className="quick-inputs" aria-label="快速输入">
             {quickInputs.map((value) => (
               <button className="chip-button" type="button" key={value} onClick={() => setText(value)}>
@@ -184,55 +253,8 @@ export function TranslatePage({ store, setStore }: PageProps) {
               </button>
             ))}
           </div>
-
-          <div className="language-row">
-            <select className="select" value={sourceLang} onChange={(event) => setSourceLang(event.target.value)}>
-              {languageOptions.map((option) => (
-                <option value={option.value} key={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <button className="button icon swap-button" type="button" onClick={swapLanguages} title="交换语言">
-              <ArrowLeftRight size={17} aria-hidden="true" />
-            </button>
-            <select className="select" value={targetLang} onChange={(event) => setTargetLang(event.target.value)}>
-              {languageOptions.map((option) => (
-                <option value={option.value} key={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button className="button primary big full-width" type="submit" disabled={isLoading || detection.intent === "empty"}>
-            {detection.intent === "lookup" ? <Search size={18} aria-hidden="true" /> : <Languages size={18} aria-hidden="true" />}
-            {isLoading ? "处理中" : detection.intent === "lookup" ? "查词" : "翻译"}
-          </button>
-        </section>
-
-        <section className="panel result-panel">
-          <div className="panel-header">
-            <div>
-              <div className="panel-title">结果</div>
-              <div className="muted small">支持复制并沉淀到词汇本</div>
-            </div>
-            {resultText ? (
-              <button className="button" type="button" onClick={saveResultToVocabulary}>
-                <Star size={16} aria-hidden="true" />
-                加入词汇本
-              </button>
-            ) : null}
-          </div>
-          <div className="pad stack">
-            {error ? <div className="error">{error}</div> : null}
-            {translation?.fallbackError ? <div className="notice">已回退到 Mock Provider：{translation.fallbackError}</div> : null}
-            {translation ? <TranslationResultPanel result={translation} /> : null}
-            {dictionaryEntry ? <DictionaryResultPanel entry={dictionaryEntry} /> : null}
-            {!translation && !dictionaryEntry && !error ? (
-              <EmptyState title="等待输入" body="单个英文词会优先查词，短语和句子会优先翻译。" />
-            ) : null}
-          </div>
+          {error ? <div className="error soft-error">{error}</div> : null}
+          {translation?.fallbackError ? <div className="notice soft-notice">已回退到 Mock Provider：{translation.fallbackError}</div> : null}
         </section>
       </form>
     </section>
@@ -241,14 +263,14 @@ export function TranslatePage({ store, setStore }: PageProps) {
 
 function TranslationResultPanel({ result }: { result: TranslateState }) {
   return (
-    <div className="stack">
+    <div className="translation-output stack">
       <div className="result-text">{result.translatedText}</div>
-      <div className="row">
-        <span className="chip good">{result.provider}</span>
-      </div>
       {result.matchedTerms.length ? (
         <div className="stack">
-          <div className="label">匹配术语</div>
+          <div className="label">
+            <Sparkles size={14} aria-hidden="true" />
+            匹配术语
+          </div>
           <div className="row">
             {result.matchedTerms.map((term) => (
               <span className="chip good" key={term.id}>
@@ -274,11 +296,11 @@ function TranslationResultPanel({ result }: { result: TranslateState }) {
 
 function DictionaryResultPanel({ entry }: { entry: DictionaryEntry }) {
   return (
-    <div className="stack">
-      <div>
+    <article className="dictionary-card stack">
+      <header>
         <div className="word-title">{entry.headword}</div>
         <div className="muted small">{[entry.phoneticUS, entry.phoneticUK].filter(Boolean).join(" / ")}</div>
-      </div>
+      </header>
       <div>
         {entry.definitions.map((definition) => (
           <div className="definition" key={definition.id}>
@@ -293,7 +315,7 @@ function DictionaryResultPanel({ entry }: { entry: DictionaryEntry }) {
           </div>
         ))}
       </div>
-    </div>
+    </article>
   );
 }
 

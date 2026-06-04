@@ -42,4 +42,3 @@ async function init() {
 function setStatus(text) {
   statusText.textContent = text;
 }
-

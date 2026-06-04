@@ -1,4 +1,4 @@
-import { ArrowRight, BarChart3, BookOpen, Clock3, DatabaseZap, Languages, Play, RotateCcw, Settings, Sparkles, Star } from "lucide-react";
+import { ArrowRight, BookOpen, Clock3, DatabaseZap, Languages, Settings, Sparkles, Star } from "lucide-react";
 import { PageKey } from "../components/AppShell";
 import { PageProps } from "../types/app";
 
@@ -8,10 +8,6 @@ type DashboardPageProps = PageProps & {
 
 export function DashboardPage({ store, onNavigate }: DashboardPageProps) {
   const totalWords = store.vocabulary.length;
-  const learningWords = store.vocabulary.filter((item) => item.status === "learning").length;
-  const masteredWords = store.vocabulary.filter((item) => item.status === "mastered").length;
-  const newWords = Math.max(totalWords - learningWords - masteredWords, 0);
-  const progress = totalWords ? Math.round((masteredWords / totalWords) * 100) : 0;
   const recentHistory = store.history.slice(0, 3);
   const enabledProviders = store.apiProviders.filter((provider) => provider.enabled).length;
 
@@ -21,26 +17,26 @@ export function DashboardPage({ store, onNavigate }: DashboardPageProps) {
 
       <section className="dashboard-hero">
         <div className="hero-copy">
-          <span className="eyebrow">今日学习</span>
-          <h1>翻译、查词、背词放到一个流程里</h1>
-          <p>先查词和翻译，再把有价值的内容沉淀到词汇本、术语表和历史里。</p>
+          <span className="eyebrow">Local-first translator</span>
+          <h1>今天想翻译什么？</h1>
+          <p>本地优先、无需登录，可导入词典与术语表，把翻译、查词、收藏和复习串成一个轻量工作流。</p>
         </div>
         <div className="hero-actions">
           <button className="button primary big" type="button" onClick={() => onNavigate("translate")}>
             <Languages size={18} aria-hidden="true" />
             开始翻译
           </button>
-          <button className="button big" type="button" onClick={() => onNavigate("vocabulary")}>
-            <Play size={18} aria-hidden="true" />
-            学习词汇
+          <button className="button big" type="button" onClick={() => onNavigate("sources")}>
+            <DatabaseZap size={18} aria-hidden="true" />
+            导入词典
           </button>
         </div>
       </section>
 
       <section className="metric-grid">
         <MetricCard label="词汇本" value={totalWords} suffix="词" tone="green" icon={Star} />
-        <MetricCard label="学习中" value={learningWords} suffix="词" tone="orange" icon={RotateCcw} />
-        <MetricCard label="已掌握" value={masteredWords} suffix="词" tone="blue" icon={BarChart3} />
+        <MetricCard label="术语表" value={store.glossary.length} suffix="条" tone="orange" icon={Sparkles} />
+        <MetricCard label="词典" value={store.userDictionaries.length} suffix="本" tone="blue" icon={DatabaseZap} />
         <MetricCard label="历史" value={store.history.length} suffix="条" tone="red" icon={Clock3} />
       </section>
 
@@ -49,24 +45,31 @@ export function DashboardPage({ store, onNavigate }: DashboardPageProps) {
           <div className="item-head">
             <div>
               <div className="panel-title">正在学习</div>
-              <div className="muted small">新词 {newWords} · 学习中 {learningWords} · 已掌握 {masteredWords}</div>
+              <div className="muted small">从翻译结果、查词结果和导入词典沉淀词条</div>
             </div>
             <button className="button icon" type="button" onClick={() => onNavigate("vocabulary")} title="打开词汇本">
               <ArrowRight size={17} aria-hidden="true" />
             </button>
           </div>
-          <div className="progress-track" aria-label="词汇掌握进度">
-            <div style={{ width: `${progress}%` }} />
-          </div>
           <div className="study-actions">
+            <button type="button" className="study-action" onClick={() => onNavigate("translate")}>
+              <Languages size={20} aria-hidden="true" />
+              <span>翻译一句话</span>
+              <strong>自动保存历史</strong>
+            </button>
             <button type="button" className="study-action" onClick={() => onNavigate("dictionary")}>
               <BookOpen size={20} aria-hidden="true" />
-              <span>查词</span>
+              <span>查一个单词</span>
               <strong>本地词典优先</strong>
+            </button>
+            <button type="button" className="study-action" onClick={() => onNavigate("vocabulary")}>
+              <Star size={20} aria-hidden="true" />
+              <span>复习词汇本</span>
+              <strong>{totalWords} 个词条</strong>
             </button>
             <button type="button" className="study-action" onClick={() => onNavigate("glossary")}>
               <Sparkles size={20} aria-hidden="true" />
-              <span>术语</span>
+              <span>管理术语表</span>
               <strong>{store.glossary.length} 条规则</strong>
             </button>
           </div>

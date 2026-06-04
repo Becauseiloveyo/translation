@@ -4,51 +4,53 @@
 
 :root {
   color-scheme: light;
-  --bg: #f3f4f2;
+  --bg: #f6f8fb;
   --panel: #ffffff;
-  --panel-soft: #f8f8f6;
-  --text: #202221;
-  --muted: #737975;
-  --muted-strong: #515955;
-  --line: #e2e5e1;
-  --line-strong: #cdd4ce;
-  --accent: #247c68;
-  --accent-strong: #155b4b;
-  --accent-soft: #e8f4ef;
-  --orange: #e9772b;
-  --orange-soft: #fff0e5;
-  --blue: #3769d8;
+  --panel-soft: #f8fbff;
+  --text: #202124;
+  --muted: #5f6368;
+  --muted-strong: #3c4043;
+  --line: #dadce0;
+  --line-strong: #bdc1c6;
+  --accent: #1a73e8;
+  --accent-strong: #174ea6;
+  --accent-soft: #e8f0fe;
+  --orange: #f29900;
+  --orange-soft: #fff7e0;
+  --blue: #1a73e8;
   --blue-soft: #edf2ff;
-  --red: #c94d5e;
-  --red-soft: #fff0f2;
+  --red: #d93025;
+  --red-soft: #fce8e6;
   --purple: #7257d6;
   --purple-soft: #f2efff;
-  --shadow: 0 10px 28px rgba(32, 34, 33, 0.08);
+  --success: #34a853;
+  --shadow: 0 6px 20px rgba(60, 64, 67, 0.12);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .dark {
   color-scheme: dark;
-  --bg: #111412;
-  --panel: #191d1b;
-  --panel-soft: #121715;
-  --text: #edf1ee;
-  --muted: #a6aca8;
-  --muted-strong: #cbd2cd;
-  --line: #2e3531;
-  --line-strong: #465049;
-  --accent: #6fd1b5;
-  --accent-strong: #96e0cc;
-  --accent-soft: #17342d;
-  --orange: #ffad66;
-  --orange-soft: #3b2415;
-  --blue: #8aa8ff;
-  --blue-soft: #18233d;
-  --red: #ff8b9b;
-  --red-soft: #3d1920;
+  --bg: #111418;
+  --panel: #1b1f24;
+  --panel-soft: #202832;
+  --text: #e8eaed;
+  --muted: #bdc1c6;
+  --muted-strong: #d2d6dc;
+  --line: #343a40;
+  --line-strong: #4b5563;
+  --accent: #8ab4f8;
+  --accent-strong: #aecbfa;
+  --accent-soft: #1d304d;
+  --orange: #fdd663;
+  --orange-soft: #382b12;
+  --blue: #8ab4f8;
+  --blue-soft: #1d304d;
+  --red: #f28b82;
+  --red-soft: #3a1f1d;
   --purple: #b6a4ff;
   --purple-soft: #261f3c;
+  --success: #81c995;
   --shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
 }
 
@@ -110,16 +112,25 @@ button:disabled {
 }
 
 .brand {
+  border: 0;
+  background: transparent;
+  color: inherit;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 4px 8px 10px;
+  text-align: left;
+  border-radius: 12px;
+}
+
+.brand:hover {
+  background: var(--accent-soft);
 }
 
 .brand-mark {
   width: 38px;
   height: 38px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--accent);
   color: white;
   display: grid;
@@ -160,7 +171,7 @@ button:disabled {
 .nav-item {
   height: 40px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   background: transparent;
   color: var(--muted-strong);
   display: flex;
@@ -182,6 +193,7 @@ button:disabled {
 .nav-item.active {
   background: var(--accent-soft);
   color: var(--accent-strong);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .mobile-topbar,
@@ -247,7 +259,7 @@ button:disabled {
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 16px;
   box-shadow: var(--shadow);
 }
 
@@ -300,7 +312,7 @@ button:disabled {
 .select {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 14px;
   background: var(--panel);
   color: var(--text);
   padding: 11px 12px;
@@ -324,7 +336,7 @@ button:disabled {
 .button {
   min-height: 38px;
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  border-radius: 14px;
   background: var(--panel);
   color: var(--text);
   padding: 0 12px;
@@ -426,7 +438,7 @@ button:disabled {
 .result-text {
   white-space: pre-wrap;
   line-height: 1.7;
-  font-size: 18px;
+  font-size: 21px;
   font-weight: 620;
 }
 
@@ -483,7 +495,7 @@ button:disabled {
 
 .empty-state {
   border: 1px dashed var(--line-strong);
-  border-radius: 8px;
+  border-radius: 16px;
   background: var(--panel-soft);
   color: var(--muted);
   padding: 24px;
@@ -525,7 +537,7 @@ button:disabled {
   border: 1px solid color-mix(in srgb, var(--blue) 30%, var(--line));
   color: var(--muted-strong);
   background: color-mix(in srgb, var(--blue) 9%, var(--panel));
-  border-radius: 8px;
+  border-radius: 14px;
   padding: 10px 12px;
 }
 
@@ -533,7 +545,7 @@ button:disabled {
   border: 1px solid color-mix(in srgb, var(--red) 36%, var(--line));
   color: var(--red);
   background: color-mix(in srgb, var(--red) 9%, var(--panel));
-  border-radius: 8px;
+  border-radius: 14px;
   padding: 10px 12px;
 }
 
@@ -549,9 +561,9 @@ button:disabled {
 
 .dashboard-hero {
   min-height: 210px;
-  border-radius: 8px;
+  border-radius: 20px;
   background:
-    linear-gradient(110deg, color-mix(in srgb, var(--accent-soft) 72%, var(--panel)) 0%, var(--panel) 48%, color-mix(in srgb, var(--orange-soft) 70%, var(--panel)) 100%);
+    linear-gradient(110deg, color-mix(in srgb, var(--accent-soft) 78%, var(--panel)) 0%, var(--panel) 54%, color-mix(in srgb, var(--blue-soft) 78%, var(--panel)) 100%);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
   padding: 24px;
@@ -593,7 +605,7 @@ button:disabled {
 .metric-card {
   min-height: 112px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 16px;
   background: var(--panel);
   box-shadow: var(--shadow);
   padding: 14px;
@@ -665,7 +677,7 @@ button:disabled {
 .study-action {
   min-height: 88px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 16px;
   background: var(--panel-soft);
   color: var(--text);
   padding: 12px;
@@ -693,7 +705,7 @@ button:disabled {
   min-height: 56px;
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 14px;
   background: var(--panel-soft);
   color: var(--text);
   padding: 10px;
@@ -713,40 +725,156 @@ button:disabled {
 .content-icon {
   width: 34px;
   height: 34px;
-  border-radius: 8px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   color: var(--accent);
   background: var(--accent-soft);
 }
 
-.translate-workspace {
+.translate-workbench {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: 16px;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas:
+    "source swap output"
+    "below below below";
+  gap: 14px;
+  align-items: stretch;
 }
 
-.translate-card {
-  position: sticky;
-  top: 28px;
+.translate-titlebar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
 }
 
-.translate-card-head {
+.translate-titlebar h1 {
+  margin: 4px 0 0;
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+.translate-titlebar p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.translate-pane {
+  min-height: 430px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.source-pane {
+  grid-area: source;
+}
+
+.output-pane {
+  grid-area: output;
+}
+
+.translate-pane-head {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
 }
 
-.compact-select {
-  max-width: 220px;
+.pane-kicker {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 760;
+  margin-bottom: 6px;
+}
+
+.lang-select {
+  min-width: 180px;
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 730;
+}
+
+.provider-select {
+  max-width: 230px;
 }
 
 .translate-input {
-  min-height: 230px;
+  min-height: 260px;
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  background: var(--panel);
+  font-size: 20px;
+  line-height: 1.7;
+  padding: 18px;
+  box-shadow: none;
+  resize: none;
+}
+
+.translate-input:focus {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+.translate-pane-foot,
+.result-toolbar {
+  min-height: 66px;
+  border-top: 1px solid var(--line);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.translate-swap {
+  grid-area: swap;
+  align-self: center;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+}
+
+.translate-result-surface {
+  flex: 1;
+  min-height: 260px;
+  padding: 18px;
+  overflow: auto;
+}
+
+.translation-output {
+  min-height: 100%;
+}
+
+.dictionary-card {
+  min-height: 100%;
+}
+
+.translate-empty {
+  min-height: 100%;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.translate-empty strong {
+  color: var(--text);
   font-size: 18px;
-  background: var(--panel-soft);
+}
+
+.translate-empty span {
+  max-width: 320px;
+  line-height: 1.6;
 }
 
 .quick-inputs {
@@ -756,24 +884,21 @@ button:disabled {
   padding-bottom: 2px;
 }
 
+.translate-below {
+  grid-area: below;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .quick-inputs::-webkit-scrollbar,
 .bottom-nav::-webkit-scrollbar {
   display: none;
 }
 
-.language-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-}
-
-.swap-button {
-  align-self: stretch;
-}
-
-.result-panel {
-  min-height: 360px;
+.soft-error,
+.soft-notice {
+  box-shadow: none;
 }
 
 .vocabulary-page {
@@ -959,13 +1084,39 @@ button:disabled {
   }
 
   .grid-two,
-  .grid-three,
-  .translate-workspace {
+  .grid-three {
     grid-template-columns: 1fr;
   }
 
-  .translate-card {
-    position: static;
+}
+
+@media (max-width: 860px) {
+  .translate-titlebar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .translate-workbench {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "source"
+      "swap"
+      "output"
+      "below";
+  }
+
+  .translate-pane {
+    min-height: 0;
+  }
+
+  .translate-input,
+  .translate-result-surface {
+    min-height: 180px;
+  }
+
+  .translate-swap {
+    justify-self: stretch;
+    width: 100%;
   }
 }
 
@@ -1001,21 +1152,21 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
-  .translate-card-head,
-  .language-row {
-    grid-template-columns: 1fr;
-    display: grid;
+  .translate-pane-head,
+  .translate-pane-foot,
+  .result-toolbar {
+    align-items: stretch;
+    flex-direction: column;
   }
 
-  .compact-select {
+  .lang-select,
+  .provider-select {
     max-width: none;
-  }
-
-  .swap-button {
     width: 100%;
   }
 
-  .textarea.translate-input {
+  .textarea.translate-input,
+  .translate-result-surface {
     min-height: 188px;
   }
 
