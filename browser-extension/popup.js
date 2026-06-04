@@ -8,9 +8,11 @@ const defaults = {
 };
 
 const sourceText = document.getElementById("sourceText");
+const sourceCount = document.getElementById("sourceCount");
 const targetLang = document.getElementById("targetLang");
 const translateButton = document.getElementById("translateButton");
 const copyButton = document.getElementById("copyButton");
+const clearButton = document.getElementById("clearButton");
 const openOptions = document.getElementById("openOptions");
 const resultText = document.getElementById("resultText");
 const providerName = document.getElementById("providerName");
@@ -31,12 +33,14 @@ async function init() {
 
   const selected = await readSelectedText();
   sourceText.value = selected || "";
+  updateSourceCount();
   if (selected) {
     await translate("selection");
   }
 }
 
 sourceText.addEventListener("input", () => {
+  updateSourceCount();
   window.clearTimeout(debounceTimer);
   debounceTimer = window.setTimeout(() => {
     void translate("debounce");
@@ -61,6 +65,15 @@ copyButton.addEventListener("click", async () => {
   }
   await navigator.clipboard.writeText(latestResult);
   setStatus("已复制", "success");
+});
+
+clearButton.addEventListener("click", () => {
+  window.clearTimeout(debounceTimer);
+  sourceText.value = "";
+  latestResult = "";
+  resultText.textContent = "译文会显示在这里";
+  updateSourceCount();
+  setStatus("");
 });
 
 openOptions.addEventListener("click", () => {
@@ -199,15 +212,37 @@ async function renderHistory() {
     button.innerHTML = `
       <span class="history-source"></span>
       <span class="history-translated"></span>
+      <span class="history-meta"></span>
     `;
     button.querySelector(".history-source").textContent = item.source || "";
     button.querySelector(".history-translated").textContent = item.translated || "";
-    button.addEventListener("click", async () => {
+    button.querySelector(".history-meta").textContent = formatHistoryMeta(item);
+    button.addEventListener("click", () => {
       sourceText.value = item.source || "";
-      await translate("history");
+      latestResult = item.translated || "";
+      resultText.textContent = latestResult || "译文会显示在这里";
+      if (item.targetLang) {
+        targetLang.value = item.targetLang;
+      }
+      updateSourceCount();
+      setStatus("已载入历史译文", "muted");
     });
     historyList.appendChild(button);
   }
+}
+
+function updateSourceCount() {
+  sourceCount.textContent = `${sourceText.value.trim().length} 字`;
+}
+
+function formatHistoryMeta(item) {
+  const time = item.createdAt
+    ? new Date(item.createdAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+      })
+    : "";
+  return [item.provider, time].filter(Boolean).join(" · ");
 }
 
 function setStatus(text, tone = "muted") {

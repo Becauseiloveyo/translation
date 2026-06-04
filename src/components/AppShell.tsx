@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
   { id: "settings", label: "设置", icon: Settings, group: "system" }
 ];
 
-const mobileNav = navItems.filter((item) => ["home", "dictionary", "vocabulary", "history", "settings"].includes(item.id));
+const mobileNav = navItems.filter((item) => ["translate", "dictionary", "vocabulary", "history", "settings"].includes(item.id));
 
 type AppShellProps = {
   currentPage: PageKey;
@@ -56,9 +56,9 @@ export function AppShell({ currentPage, onPageChange, children }: AppShellProps)
           </div>
         </button>
 
-        <NavGroup title="主功能" items={navItems.filter((item) => item.group === "primary")} currentPage={currentPage} onPageChange={onPageChange} />
+        <NavGroup title="主入口" items={navItems.filter((item) => item.group === "primary")} currentPage={currentPage} onPageChange={onPageChange} />
         <NavGroup title="资料" items={navItems.filter((item) => item.group === "library")} currentPage={currentPage} onPageChange={onPageChange} />
-        <NavGroup title="系统" items={navItems.filter((item) => item.group === "system")} currentPage={currentPage} onPageChange={onPageChange} />
+        <NavGroup title="偏好" items={navItems.filter((item) => item.group === "system")} currentPage={currentPage} onPageChange={onPageChange} />
       </aside>
 
       <div className="mobile-topbar">

@@ -12,7 +12,7 @@ import { AppStore } from "./types/models";
 import { loadStore, saveStore } from "./services/storage/localStore";
 
 export function App() {
-  const [page, setPage] = useState<PageKey>("home");
+  const [page, setPage] = useState<PageKey>("translate");
   const [store, setStore] = useState<AppStore>(() => loadStore());
 
   useEffect(() => {

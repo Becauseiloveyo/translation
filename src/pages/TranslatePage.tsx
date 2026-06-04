@@ -41,6 +41,8 @@ export function TranslatePage({ store, setStore }: PageProps) {
 
   const providerOptions = store.apiProviders.filter((provider) => provider.useFor.includes("translate"));
   const resultText = translation?.translatedText ?? dictionaryEntry?.definitions[0]?.definitionZh ?? dictionaryEntry?.definitions[0]?.definitionEn ?? "";
+  const resultTitle = dictionaryEntry ? "词典释义" : "译文";
+  const primaryActionLabel = isLoading ? "处理中" : detection.intent === "lookup" ? "查词" : "翻译";
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -161,19 +163,38 @@ export function TranslatePage({ store, setStore }: PageProps) {
       </header>
 
       <form className="translate-workbench" onSubmit={handleSubmit}>
+        <section className="panel language-bar" aria-label="语言设置">
+          <label className="lang-control">
+            <span>源语言</span>
+            <select className="select lang-select" value={sourceLang} onChange={(event) => setSourceLang(event.target.value)}>
+              {languageOptions.map((option) => (
+                <option value={option.value} key={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="button icon language-swap" type="button" onClick={swapLanguages} title="交换语言">
+            <ArrowLeftRight size={18} aria-hidden="true" />
+          </button>
+          <label className="lang-control">
+            <span>目标语言</span>
+            <select className="select lang-select" value={targetLang} onChange={(event) => setTargetLang(event.target.value)}>
+              {languageOptions.map((option) => (
+                <option value={option.value} key={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </section>
+
         <section className="panel translate-pane source-pane">
           <div className="translate-pane-head">
             <div>
               <div className="pane-kicker">原文</div>
-              <select className="select lang-select" value={sourceLang} onChange={(event) => setSourceLang(event.target.value)}>
-                {languageOptions.map((option) => (
-                  <option value={option.value} key={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <div className="pane-title">输入或粘贴要处理的内容</div>
             </div>
-            <span className="chip">{formatDetection(detection)}</span>
           </div>
           <textarea
             className="textarea translate-input"
@@ -182,37 +203,45 @@ export function TranslatePage({ store, setStore }: PageProps) {
             placeholder="输入或粘贴要翻译的文本"
           />
           <div className="translate-pane-foot">
-            <span className="muted small">{text.trim().length} 字</span>
-            <button className="button primary" type="submit" disabled={isLoading || detection.intent === "empty"}>
-              {detection.intent === "lookup" ? <Search size={17} aria-hidden="true" /> : <Languages size={17} aria-hidden="true" />}
-              {isLoading ? "处理中" : detection.intent === "lookup" ? "查词" : "翻译"}
-            </button>
+            <div className="source-meta">
+              <span className="muted small">{text.trim().length} 字</span>
+              <span className="chip">{formatDetection(detection)}</span>
+            </div>
+            <div className="source-actions">
+              <button className="button" type="button" onClick={clearAll}>
+                <Eraser size={16} aria-hidden="true" />
+                清空
+              </button>
+              <button className="button primary" type="submit" disabled={isLoading || detection.intent === "empty"}>
+                {detection.intent === "lookup" ? <Search size={17} aria-hidden="true" /> : <Languages size={17} aria-hidden="true" />}
+                {primaryActionLabel}
+              </button>
+            </div>
           </div>
         </section>
-
-        <button className="button icon translate-swap" type="button" onClick={swapLanguages} title="交换语言">
-          <ArrowLeftRight size={18} aria-hidden="true" />
-        </button>
 
         <section className="panel translate-pane output-pane">
           <div className="translate-pane-head">
             <div>
-              <div className="pane-kicker">译文</div>
-              <select className="select lang-select" value={targetLang} onChange={(event) => setTargetLang(event.target.value)}>
-                {languageOptions.map((option) => (
-                  <option value={option.value} key={option.value}>
-                    {option.label}
+              <div className="pane-kicker">{resultTitle}</div>
+              <div className="pane-title">{dictionaryEntry ? dictionaryEntry.headword : "翻译结果与操作"}</div>
+            </div>
+            <div className="result-toolbar compact">
+              <select className="select provider-select" value={providerId} onChange={(event) => setProviderId(event.target.value)} title="Provider">
+                {providerOptions.map((provider) => (
+                  <option value={provider.id} key={provider.id}>
+                    {provider.name}
                   </option>
                 ))}
               </select>
+              <button className="button icon" type="button" onClick={copyResult} disabled={!resultText} title="复制">
+                <Copy size={16} aria-hidden="true" />
+              </button>
+              <button className="button" type="button" onClick={saveResultToVocabulary} disabled={!resultText}>
+                <Star size={16} aria-hidden="true" />
+                加入词汇本
+              </button>
             </div>
-            <select className="select provider-select" value={providerId} onChange={(event) => setProviderId(event.target.value)}>
-              {providerOptions.map((provider) => (
-                <option value={provider.id} key={provider.id}>
-                  {provider.name}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="translate-result-surface">
@@ -226,33 +255,21 @@ export function TranslatePage({ store, setStore }: PageProps) {
               </div>
             ) : null}
           </div>
-
-          <div className="result-toolbar">
-            <div className="row">
-              {translation ? <span className="chip good">{translation.provider}</span> : null}
-              {dictionaryEntry ? <span className="chip good">{dictionaryEntry.source ?? "Dictionary"}</span> : null}
-            </div>
-            <div className="row">
-              <button className="button" type="button" onClick={copyResult} disabled={!resultText}>
-                <Copy size={16} aria-hidden="true" />
-                复制
-              </button>
-              <button className="button" type="button" onClick={saveResultToVocabulary} disabled={!resultText}>
-                <Star size={16} aria-hidden="true" />
-                收藏
-              </button>
-            </div>
-          </div>
         </section>
 
-        <section className="translate-below">
-          <div className="quick-inputs" aria-label="快速输入">
-            {quickInputs.map((value) => (
-              <button className="chip-button" type="button" key={value} onClick={() => setText(value)}>
-                {value}
-              </button>
-            ))}
+        <section className="translate-secondary">
+          <div className="secondary-block">
+            <div className="label">快速输入</div>
+            <div className="quick-inputs" aria-label="快速输入">
+              {quickInputs.map((value) => (
+                <button className="chip-button" type="button" key={value} onClick={() => setText(value)}>
+                  {value}
+                </button>
+              ))}
+            </div>
           </div>
+          {translation?.matchedTerms.length ? <MatchedTerms terms={translation.matchedTerms} /> : null}
+          {translation?.alternatives.length ? <AlternativeTranslations alternatives={translation.alternatives} /> : null}
           {error ? <div className="error soft-error">{error}</div> : null}
           {translation?.fallbackError ? <div className="notice soft-notice">已回退到 Mock Provider：{translation.fallbackError}</div> : null}
         </section>
@@ -264,32 +281,10 @@ export function TranslatePage({ store, setStore }: PageProps) {
 function TranslationResultPanel({ result }: { result: TranslateState }) {
   return (
     <div className="translation-output stack">
+      <div className="row">
+        <span className="chip good">{result.provider}</span>
+      </div>
       <div className="result-text">{result.translatedText}</div>
-      {result.matchedTerms.length ? (
-        <div className="stack">
-          <div className="label">
-            <Sparkles size={14} aria-hidden="true" />
-            匹配术语
-          </div>
-          <div className="row">
-            {result.matchedTerms.map((term) => (
-              <span className="chip good" key={term.id}>
-                {term.sourceText} → {term.targetText}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
-      {result.alternatives.length ? (
-        <div className="stack">
-          <div className="label">备选译法</div>
-          {result.alternatives.map((alternative) => (
-            <div className="notice" key={alternative}>
-              {alternative}
-            </div>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -298,24 +293,65 @@ function DictionaryResultPanel({ entry }: { entry: DictionaryEntry }) {
   return (
     <article className="dictionary-card stack">
       <header>
-        <div className="word-title">{entry.headword}</div>
-        <div className="muted small">{[entry.phoneticUS, entry.phoneticUK].filter(Boolean).join(" / ")}</div>
+        <div className="dictionary-card-head">
+          <div>
+            <div className="word-title">{entry.headword}</div>
+            <div className="phonetic-row">
+              {entry.phoneticUS ? <span>US {entry.phoneticUS}</span> : null}
+              {entry.phoneticUK ? <span>UK {entry.phoneticUK}</span> : null}
+            </div>
+          </div>
+          {entry.source ? <span className="chip good">{entry.source}</span> : null}
+        </div>
       </header>
-      <div>
+      <div className="definition-list">
         {entry.definitions.map((definition) => (
-          <div className="definition" key={definition.id}>
-            <div className="row">
+          <section className="definition-card" key={definition.id}>
+            <div className="definition-meta">
               {definition.partOfSpeech ? <span className="chip">{definition.partOfSpeech}</span> : null}
               {definition.source ? <span className="chip">{definition.source}</span> : null}
             </div>
-            {definition.definitionZh ? <p>{definition.definitionZh}</p> : null}
-            {definition.definitionEn ? <p className="muted">{definition.definitionEn}</p> : null}
-            {definition.exampleEn ? <p className="small">{definition.exampleEn}</p> : null}
-            {definition.exampleZh ? <p className="small muted">{definition.exampleZh}</p> : null}
-          </div>
+            {definition.definitionZh ? <p className="definition-zh">{definition.definitionZh}</p> : null}
+            {definition.definitionEn ? <p className="definition-en">{definition.definitionEn}</p> : null}
+            {definition.exampleEn ? <p className="example">例：{definition.exampleEn}</p> : null}
+            {definition.exampleZh ? <p className="example muted">{definition.exampleZh}</p> : null}
+          </section>
         ))}
       </div>
     </article>
+  );
+}
+
+function MatchedTerms({ terms }: { terms: UserTerm[] }) {
+  return (
+    <div className="secondary-block">
+      <div className="label">
+        <Sparkles size={14} aria-hidden="true" />
+        术语匹配
+      </div>
+      <div className="term-chip-grid">
+        {terms.map((term) => (
+          <span className="chip good" key={term.id}>
+            {term.sourceText} → {term.targetText}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AlternativeTranslations({ alternatives }: { alternatives: string[] }) {
+  return (
+    <div className="secondary-block">
+      <div className="label">备选译法</div>
+      <div className="alternative-grid">
+        {alternatives.map((alternative) => (
+          <div className="notice" key={alternative}>
+            {alternative}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
