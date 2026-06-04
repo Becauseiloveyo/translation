@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell, PageKey } from "./components/AppShell";
+import { DashboardPage } from "./pages/DashboardPage";
 import { DictionaryPage } from "./pages/DictionaryPage";
 import { DictionarySourcesPage } from "./pages/DictionarySourcesPage";
 import { GlossaryPage } from "./pages/GlossaryPage";
@@ -11,7 +12,7 @@ import { AppStore } from "./types/models";
 import { loadStore, saveStore } from "./services/storage/localStore";
 
 export function App() {
-  const [page, setPage] = useState<PageKey>("translate");
+  const [page, setPage] = useState<PageKey>("home");
   const [store, setStore] = useState<AppStore>(() => loadStore());
 
   useEffect(() => {
@@ -28,6 +29,8 @@ export function App() {
   const content = useMemo(() => {
     const shared = { store, setStore };
     switch (page) {
+      case "home":
+        return <DashboardPage {...shared} onNavigate={setPage} />;
       case "translate":
         return <TranslatePage {...shared} />;
       case "dictionary":
@@ -53,4 +56,3 @@ export function App() {
     </AppShell>
   );
 }
-
