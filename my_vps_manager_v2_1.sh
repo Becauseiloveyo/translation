@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="2.1.1-owned"
+VERSION="2.1.2-owned"
 REPO="https://raw.githubusercontent.com/Becauseiloveyo/translation/main"
 SELF="/root/my_vps_manager.sh"
 BIN_LINK="/usr/local/bin/myvps"
@@ -16,8 +16,6 @@ REALITY_SNI="www.microsoft.com"
 REALITY_DEST="www.microsoft.com:443"
 LOCAL_HTTPS_PORT="10443"
 XRAY_LOCAL_PORT="24443"
-BLOG_BACKEND="127.0.0.1:3000"
-ADGUARD_BACKEND="127.0.0.1:8080"
 
 XRAY_SERVICE="xray-racknerd-443"
 XRAY_BASE="/etc/xray-racknerd-443"
@@ -62,6 +60,15 @@ header(){
   echo -e "模式: 自有 Xray Reality 443 + nginx stream SNI 分流 + 分离加密备份\n"
 }
 
+local_ipv4s(){
+  ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | grep -Ev '^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.)' | sort -u || true
+}
+
+contains_line(){
+  local needle="$1"
+  grep -Fxq "$needle"
+}
+
 write_default_config(){
   need_root
   if [[ -f "$CONFIG_FILE" ]]; then ok "配置文件已存在：$CONFIG_FILE"; return; fi
@@ -73,8 +80,6 @@ REALITY_SNI="www.microsoft.com"
 REALITY_DEST="www.microsoft.com:443"
 LOCAL_HTTPS_PORT="10443"
 XRAY_LOCAL_PORT="24443"
-BLOG_BACKEND="127.0.0.1:3000"
-ADGUARD_BACKEND="127.0.0.1:8080"
 VPS_BACKUP_REMOTE="ggdrive:VPS-Backups/racknerd/full"
 VPS_INVENTORY_REMOTE="ggdrive:VPS-Backups/racknerd/inventory"
 BLOG_BACKUP_REMOTE="gdrive:Blog-Backups/moyan-blog/full"
@@ -128,7 +133,8 @@ vps_info(){
   free -h || true
   df -h / || true
   df -i / || true
-  echo "IPv4: $(curl -4 -s --max-time 8 https://api.ipify.org || true)"
+  echo "本机入站 IPv4: $(local_ipv4s | paste -sd ',' -)"
+  echo "当前出站 IPv4: $(curl -4 -s --max-time 8 https://api.ipify.org || true)"
 }
 
 preflight(){
@@ -145,7 +151,7 @@ preflight(){
   echo "BLOG_BACKUP_REMOTE=$BLOG_BACKUP_REMOTE"
   echo
   echo "== 关键命令 =="
-  for c in nginx curl jq openssl tar rclone iptables systemctl ss dig; do has "$c" && echo "OK $c" || echo "MISS $c"; done
+  for c in nginx curl jq openssl tar rclone iptables systemctl ss dig ip awk sed; do has "$c" && echo "OK $c" || echo "MISS $c"; done
   echo
   echo "== nginx stream 支持 =="
   if nginx -V 2>&1 | grep -q -- '--with-stream'; then echo "OK nginx static stream";
@@ -156,16 +162,22 @@ preflight(){
   ss -tulnp | grep -E ':53\b|:80\b|:443\b|:10443\b|:24443\b|:3000\b|:8080\b|nginx|xray|node|AdGuardHome' || true
   echo
   echo "== 域名解析 =="
-  local server_ip vpn_ip blog_ip ad_ip
-  server_ip="$(curl -4 -s --max-time 8 https://api.ipify.org || true)"
-  vpn_ip="$(dig +short A "$VPN_DOMAIN" | tail -1 || true)"
-  blog_ip="$(dig +short A "$BLOG_DOMAIN" | tail -1 || true)"
-  ad_ip="$(dig +short A "$AD_DOMAIN" | tail -1 || true)"
-  echo "Server IPv4: ${server_ip:-unknown}"
-  echo "$VPN_DOMAIN: ${vpn_ip:-unknown}"
-  echo "$BLOG_DOMAIN: ${blog_ip:-unknown}"
-  echo "$AD_DOMAIN: ${ad_ip:-unknown}"
-  [[ -n "${server_ip:-}" && -n "${vpn_ip:-}" && "$server_ip" != "$vpn_ip" ]] && warn "$VPN_DOMAIN 没有直接解析到本机。Reality 域名需要 DNS only/灰云。"
+  local local_ips vpn_ips blog_ips ad_ips
+  local_ips="$(local_ipv4s)"
+  vpn_ips="$(dig +short A "$VPN_DOMAIN" | grep -E '^[0-9.]+' | sort -u || true)"
+  blog_ips="$(dig +short A "$BLOG_DOMAIN" | grep -E '^[0-9.]+' | sort -u || true)"
+  ad_ips="$(dig +short A "$AD_DOMAIN" | grep -E '^[0-9.]+' | sort -u || true)"
+  echo "Local inbound IPv4:"; echo "${local_ips:-unknown}"
+  echo "$VPN_DOMAIN:"; echo "${vpn_ips:-unknown}"
+  echo "$BLOG_DOMAIN:"; echo "${blog_ips:-unknown}"
+  echo "$AD_DOMAIN:"; echo "${ad_ips:-unknown}"
+  if [[ -n "$local_ips" && -n "$vpn_ips" ]]; then
+    if ! comm -12 <(echo "$local_ips" | sort) <(echo "$vpn_ips" | sort) | grep -q .; then
+      warn "$VPN_DOMAIN 没有解析到本机入站 IPv4。Reality 域名需要 DNS only/灰云。"
+    else
+      ok "$VPN_DOMAIN 已解析到本机入站 IPv4"
+    fi
+  fi
   echo
   echo "== rclone remote =="
   has rclone && rclone listremotes || echo "rclone missing"
@@ -208,11 +220,14 @@ rollback_last(){
 ensure_xray(){
   need_root
   if [[ -x "$XRAY_BIN" ]] && "$XRAY_BIN" version >/dev/null 2>&1; then ok "Xray 已存在：$($XRAY_BIN version | head -1)"; return; fi
-  local tmp asset
+  local tmp
   tmp="/tmp/xray-install-$$"; mkdir -p "$tmp"
-  asset="$(curl -fsSL https://api.github.com/repos/XTLS/Xray-core/releases/latest | jq -r '.assets[].browser_download_url' | grep 'Xray-linux-64.zip$' | head -1)"
-  [[ -n "$asset" && "$asset" != "null" ]] || die "找不到 Xray-linux-64.zip 下载地址"
-  curl -fL --retry 3 -o "$tmp/xray.zip" "$asset"
+  if ! curl -fL --retry 3 -A "Mozilla/5.0" -o "$tmp/xray.zip" "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip"; then
+    local asset
+    asset="$(curl -fsSL -A "Mozilla/5.0" https://api.github.com/repos/XTLS/Xray-core/releases/latest | jq -r '.assets[].browser_download_url' | grep 'Xray-linux-64.zip$' | head -1)"
+    [[ -n "$asset" && "$asset" != "null" ]] || die "找不到 Xray-linux-64.zip 下载地址"
+    curl -fL --retry 3 -A "Mozilla/5.0" -o "$tmp/xray.zip" "$asset"
+  fi
   unzip -o "$tmp/xray.zip" -d "$tmp/xray" >/dev/null
   install -m 755 "$tmp/xray/xray" "$XRAY_BIN"
   mkdir -p /usr/local/share/xray
@@ -242,10 +257,10 @@ write_xray_reality(){
   local uuid keyout private public sid
   uuid="$($XRAY_BIN uuid)"
   keyout="$($XRAY_BIN x25519)"
-  private="$(echo "$keyout" | awk -F': ' '/Private key/{print $2}')"
-  public="$(echo "$keyout" | awk -F': ' '/Public key/{print $2}')"
+  private="$(printf '%s\n' "$keyout" | sed -nE 's/^(PrivateKey|Private key):[[:space:]]*//p' | head -1)"
+  public="$(printf '%s\n' "$keyout" | sed -nE 's/^(Password \(PublicKey\)|PublicKey|Public key):[[:space:]]*//p' | head -1)"
   sid="$(openssl rand -hex 8)"
-  [[ -n "$uuid" && -n "$private" && -n "$public" && -n "$sid" ]] || die "生成 Reality 参数失败"
+  [[ -n "$uuid" && -n "$private" && -n "$public" && -n "$sid" ]] || { echo "$keyout" >&2; die "生成 Reality 参数失败"; }
   cat > "$XRAY_CONFIG" <<EOF_XRAY
 {
   "log": {"loglevel": "warning", "access": "$XRAY_BASE/access.log", "error": "$XRAY_BASE/error.log"},
