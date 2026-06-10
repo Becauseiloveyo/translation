@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="2.1.0-owned"
-REPO="https://raw.githubusercontent.com/Becauseiloveyo/racknerd-v2ray-agent-manager/main"
+VERSION="2.1.1-owned"
+REPO="https://raw.githubusercontent.com/Becauseiloveyo/translation/main"
 SELF="/root/my_vps_manager.sh"
 BIN_LINK="/usr/local/bin/myvps"
 LOG="/var/log/my_vps_manager.log"
-REPORT_DIR="/root/my-vps-reports"
 CONFIG_FILE="/etc/myvps-manager.conf"
 LOCK_DIR="/run/lock"
 
-# Defaults for this RackNerd VPS. Override in /etc/myvps-manager.conf.
 BLOG_DOMAIN="blog.gooffu.tech"
 AD_DOMAIN="ad.gooffu.tech"
 VPN_DOMAIN="2b.gooffu.tech"
@@ -29,7 +27,6 @@ XRAY_CLIENT="$XRAY_BASE/client.txt"
 NGINX_STREAM_DIR="/etc/nginx/stream.d"
 NGINX_STREAM_CONF="$NGINX_STREAM_DIR/443-sni.conf"
 
-# Separated encrypted backups.
 VPS_BACKUP_REMOTE="ggdrive:VPS-Backups/racknerd/full"
 VPS_INVENTORY_REMOTE="ggdrive:VPS-Backups/racknerd/inventory"
 BLOG_BACKUP_REMOTE="gdrive:Blog-Backups/moyan-blog/full"
@@ -39,10 +36,7 @@ BACKUP_WORKDIR="/root/my-vps-backups"
 BLOG_ROOT="/root/my-b"
 RETENTION_COUNT="8"
 
-if [[ -f "$CONFIG_FILE" ]]; then
-  # shellcheck disable=SC1090
-  source "$CONFIG_FILE"
-fi
+[[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
 
 if [[ -t 1 ]]; then
   R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; C='\033[0;36m'; W='\033[1m'; N='\033[0m'
@@ -70,12 +64,8 @@ header(){
 
 write_default_config(){
   need_root
-  if [[ -f "$CONFIG_FILE" ]]; then
-    ok "配置文件已存在：$CONFIG_FILE"
-    return
-  fi
+  if [[ -f "$CONFIG_FILE" ]]; then ok "配置文件已存在：$CONFIG_FILE"; return; fi
   cat > "$CONFIG_FILE" <<EOF_CONF
-# My VPS manager config
 BLOG_DOMAIN="blog.gooffu.tech"
 AD_DOMAIN="ad.gooffu.tech"
 VPN_DOMAIN="2b.gooffu.tech"
@@ -102,17 +92,24 @@ install_deps(){
   need_root
   has apt-get || die "当前脚本按 Debian/Ubuntu apt 系设计。"
   apt-get update
-  DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    curl wget ca-certificates jq unzip openssl dnsutils iproute2 lsof tar gzip cron rclone iptables netfilter-persistent fail2ban
+  DEBIAN_FRONTEND=noninteractive apt-get install -y curl wget ca-certificates jq unzip openssl dnsutils iproute2 lsof tar gzip cron rclone iptables netfilter-persistent fail2ban
   systemctl enable --now cron >/dev/null 2>&1 || true
   ok "基础依赖已安装"
+}
+
+install_shortcut(){
+  need_root
+  curl -fsSL --retry 3 -o "$SELF" "$REPO/my_vps_manager_v2_1.sh"
+  chmod 700 "$SELF"
+  ln -sf "$SELF" "$BIN_LINK"
+  ok "已安装快捷命令：myvps"
 }
 
 install_base(){
   need_root
   write_default_config
   install_deps
-  if has timedatectl; then timedatectl set-ntp true || true; fi
+  timedatectl set-ntp true 2>/dev/null || true
   cat >/etc/sysctl.d/98-my-vps.conf <<'EOF_SYSCTL'
 net.core.default_qdisc=fq
 net.ipv4.tcp_congestion_control=bbr
@@ -124,16 +121,6 @@ EOF_SYSCTL
   ok "首次准备完成"
 }
 
-install_shortcut(){
-  need_root
-  curl -fsSL --retry 3 -o "$SELF" "$REPO/my_vps_manager_v2_1.sh"
-  chmod 700 "$SELF"
-  ln -sf "$SELF" "$BIN_LINK"
-  ok "已安装快捷命令：myvps"
-}
-
-update_self(){ install_shortcut; }
-
 vps_info(){
   echo "系统: $(grep -E '^PRETTY_NAME=' /etc/os-release 2>/dev/null | cut -d= -f2- | tr -d '"' || echo unknown)"
   echo "内核: $(uname -r)"
@@ -141,17 +128,12 @@ vps_info(){
   free -h || true
   df -h / || true
   df -i / || true
-  echo
   echo "IPv4: $(curl -4 -s --max-time 8 https://api.ipify.org || true)"
-  if has jq; then curl -4 -s --max-time 8 https://ipinfo.io/json | jq -r '"地区: \(.country) \(.city)\nASN: \(.org)"' || true; fi
 }
 
 preflight(){
   need_root
-  echo "== 基础信息 =="
-  vps_info
-  echo
-
+  echo "== 基础信息 =="; vps_info; echo
   echo "== 配置 =="
   echo "BLOG_DOMAIN=$BLOG_DOMAIN"
   echo "AD_DOMAIN=$AD_DOMAIN"
@@ -162,27 +144,17 @@ preflight(){
   echo "VPS_BACKUP_REMOTE=$VPS_BACKUP_REMOTE"
   echo "BLOG_BACKUP_REMOTE=$BLOG_BACKUP_REMOTE"
   echo
-
   echo "== 关键命令 =="
-  for c in nginx curl jq openssl tar rclone iptables systemctl ss dig; do
-    if has "$c"; then echo "OK $c"; else echo "MISS $c"; fi
-  done
+  for c in nginx curl jq openssl tar rclone iptables systemctl ss dig; do has "$c" && echo "OK $c" || echo "MISS $c"; done
   echo
-
   echo "== nginx stream 支持 =="
-  if nginx -V 2>&1 | grep -q -- '--with-stream'; then
-    echo "OK nginx static stream"
-  elif [[ -f /usr/lib/nginx/modules/ngx_stream_module.so ]]; then
-    echo "OK nginx dynamic stream module exists"
-  else
-    echo "WARN nginx stream not detected. Do not install VPN 443 until fixed."
-  fi
+  if nginx -V 2>&1 | grep -q -- '--with-stream'; then echo "OK nginx static stream";
+  elif [[ -f /usr/lib/nginx/modules/ngx_stream_module.so ]]; then echo "OK nginx dynamic stream module exists";
+  else echo "WARN nginx stream not detected. Do not install VPN 443 until fixed."; fi
   echo
-
   echo "== 当前监听 =="
   ss -tulnp | grep -E ':53\b|:80\b|:443\b|:10443\b|:24443\b|:3000\b|:8080\b|nginx|xray|node|AdGuardHome' || true
   echo
-
   echo "== 域名解析 =="
   local server_ip vpn_ip blog_ip ad_ip
   server_ip="$(curl -4 -s --max-time 8 https://api.ipify.org || true)"
@@ -193,15 +165,11 @@ preflight(){
   echo "$VPN_DOMAIN: ${vpn_ip:-unknown}"
   echo "$BLOG_DOMAIN: ${blog_ip:-unknown}"
   echo "$AD_DOMAIN: ${ad_ip:-unknown}"
-  if [[ -n "${server_ip:-}" && -n "${vpn_ip:-}" && "$server_ip" != "$vpn_ip" ]]; then
-    warn "$VPN_DOMAIN 没有直接解析到本机。Reality 域名需要 DNS only/灰云。"
-  fi
+  [[ -n "${server_ip:-}" && -n "${vpn_ip:-}" && "$server_ip" != "$vpn_ip" ]] && warn "$VPN_DOMAIN 没有直接解析到本机。Reality 域名需要 DNS only/灰云。"
   echo
-
   echo "== rclone remote =="
-  if has rclone; then rclone listremotes || true; else echo "rclone missing"; fi
+  has rclone && rclone listremotes || echo "rclone missing"
   echo
-
   echo "== HTTP 检查 =="
   curl -I --max-time 10 "https://$BLOG_DOMAIN" 2>/dev/null | sed -n '1,6p' || true
   curl -I --max-time 10 "https://$AD_DOMAIN" 2>/dev/null | sed -n '1,6p' || true
@@ -227,33 +195,21 @@ rollback_last(){
   local last
   last="$(cat /root/last-owned-change-backup.txt 2>/dev/null || true)"
   [[ -n "$last" && -d "$last" ]] || die "找不到 /root/last-owned-change-backup.txt 指向的备份目录"
-
   warn "将回滚：$last"
   systemctl disable --now "$XRAY_SERVICE" 2>/dev/null || true
   rm -f "/etc/systemd/system/$XRAY_SERVICE.service"
   systemctl daemon-reload
-
-  if [[ -d "$last/nginx" ]]; then
-    rm -rf /etc/nginx
-    cp -a "$last/nginx" /etc/nginx
-  fi
-  if [[ -f "$last/iptables.rules" ]]; then
-    iptables-restore < "$last/iptables.rules" || true
-    has netfilter-persistent && netfilter-persistent save || true
-  fi
+  [[ -d "$last/nginx" ]] && rm -rf /etc/nginx && cp -a "$last/nginx" /etc/nginx
+  if [[ -f "$last/iptables.rules" ]]; then iptables-restore < "$last/iptables.rules" || true; has netfilter-persistent && netfilter-persistent save || true; fi
   nginx -t && systemctl reload nginx
   ok "已回滚 nginx/iptables 并停止 $XRAY_SERVICE"
 }
 
 ensure_xray(){
   need_root
-  if [[ -x "$XRAY_BIN" ]] && "$XRAY_BIN" version >/dev/null 2>&1; then
-    ok "Xray 已存在：$($XRAY_BIN version | head -1)"
-    return
-  fi
+  if [[ -x "$XRAY_BIN" ]] && "$XRAY_BIN" version >/dev/null 2>&1; then ok "Xray 已存在：$($XRAY_BIN version | head -1)"; return; fi
   local tmp asset
-  tmp="/tmp/xray-install-$$"
-  mkdir -p "$tmp"
+  tmp="/tmp/xray-install-$$"; mkdir -p "$tmp"
   asset="$(curl -fsSL https://api.github.com/repos/XTLS/Xray-core/releases/latest | jq -r '.assets[].browser_download_url' | grep 'Xray-linux-64.zip$' | head -1)"
   [[ -n "$asset" && "$asset" != "null" ]] || die "找不到 Xray-linux-64.zip 下载地址"
   curl -fL --retry 3 -o "$tmp/xray.zip" "$asset"
@@ -269,25 +225,20 @@ ensure_xray(){
 ensure_nginx_stream(){
   need_root
   has nginx || die "未安装 nginx。"
-  if nginx -V 2>&1 | grep -q -- '--with-stream'; then
-    ok "nginx 已静态支持 stream"
-    return
-  fi
+  if nginx -V 2>&1 | grep -q -- '--with-stream'; then ok "nginx 已静态支持 stream"; return; fi
   if [[ -f /usr/lib/nginx/modules/ngx_stream_module.so ]]; then
     if ! grep -q 'ngx_stream_module.so' /etc/nginx/nginx.conf; then
       cp -a /etc/nginx/nginx.conf "/etc/nginx/nginx.conf.bak.stream.$(date +%F_%H%M%S)"
       sed -i '1iload_module /usr/lib/nginx/modules/ngx_stream_module.so;' /etc/nginx/nginx.conf
     fi
-    ok "nginx 已加载动态 stream 模块"
-    return
+    ok "nginx 已加载动态 stream 模块"; return
   fi
   die "当前 nginx 未发现 stream 支持。为避免破坏 nginx.org mainline 包，脚本不会自动强装模块。请先处理 nginx stream。"
 }
 
 write_xray_reality(){
   ensure_xray
-  mkdir -p "$XRAY_BASE"
-  chmod 700 "$XRAY_BASE"
+  mkdir -p "$XRAY_BASE"; chmod 700 "$XRAY_BASE"
   local uuid keyout private public sid
   uuid="$($XRAY_BIN uuid)"
   keyout="$($XRAY_BIN x25519)"
@@ -295,7 +246,6 @@ write_xray_reality(){
   public="$(echo "$keyout" | awk -F': ' '/Public key/{print $2}')"
   sid="$(openssl rand -hex 8)"
   [[ -n "$uuid" && -n "$private" && -n "$public" && -n "$sid" ]] || die "生成 Reality 参数失败"
-
   cat > "$XRAY_CONFIG" <<EOF_XRAY
 {
   "log": {"loglevel": "warning", "access": "$XRAY_BASE/access.log", "error": "$XRAY_BASE/error.log"},
@@ -311,7 +261,6 @@ write_xray_reality(){
 }
 EOF_XRAY
   chmod 600 "$XRAY_CONFIG"
-
   cat > "/etc/systemd/system/$XRAY_SERVICE.service" <<EOF_SERVICE
 [Unit]
 Description=My RackNerd Xray Reality 443 Service
@@ -332,7 +281,6 @@ EOF_SERVICE
   systemctl daemon-reload
   systemctl enable "$XRAY_SERVICE"
   systemctl restart "$XRAY_SERVICE"
-
   cat > "$XRAY_CLIENT" <<EOF_CLIENT
 VLESS Reality 443 节点
 地址: $VPN_DOMAIN
@@ -357,44 +305,27 @@ EOF_CLIENT
 configure_nginx_443_split(){
   ensure_nginx_stream
   mkdir -p "$NGINX_STREAM_DIR"
-
-  # Idempotent: only convert public listen 443 lines, not already-local 10443 lines.
   if grep -RqsE '^[[:space:]]*listen[[:space:]]+443([^0-9]|;)' /etc/nginx/conf.d 2>/dev/null; then
-    find /etc/nginx/conf.d -type f -name "*.conf" -print0 | \
-      xargs -0 sed -i -E "s/^[[:space:]]*listen[[:space:]]+443([^;]*);/    listen 127.0.0.1:$LOCAL_HTTPS_PORT\1;/g"
+    find /etc/nginx/conf.d -type f -name "*.conf" -print0 | xargs -0 sed -i -E "s/^[[:space:]]*listen[[:space:]]+443([^;]*);/    listen 127.0.0.1:$LOCAL_HTTPS_PORT\1;/g"
   fi
-
   cat > "$NGINX_STREAM_CONF" <<EOF_STREAM
 # Managed by my_vps_manager_v2_1.sh
-# Public 443 stays on nginx stream. Only the Reality SNI goes to Xray.
-# Unknown SNI falls back to local HTTPS to reduce accidental website breakage.
-
 map \$ssl_preread_server_name \$my_443_backend {
     $BLOG_DOMAIN  local_https_backend;
     $AD_DOMAIN    local_https_backend;
     $REALITY_SNI  xray_reality_backend;
     default       local_https_backend;
 }
-
-upstream local_https_backend {
-    server 127.0.0.1:$LOCAL_HTTPS_PORT;
-}
-
-upstream xray_reality_backend {
-    server 127.0.0.1:$XRAY_LOCAL_PORT;
-}
-
+upstream local_https_backend { server 127.0.0.1:$LOCAL_HTTPS_PORT; }
+upstream xray_reality_backend { server 127.0.0.1:$XRAY_LOCAL_PORT; }
 server {
     listen 443;
     proxy_pass \$my_443_backend;
     ssl_preread on;
 }
 EOF_STREAM
-
   if ! grep -q 'include /etc/nginx/stream.d/\*.conf;' /etc/nginx/nginx.conf; then
-    if grep -qE '^[[:space:]]*stream[[:space:]]*\{' /etc/nginx/nginx.conf; then
-      die "nginx.conf 已有 stream 块，请手动合并 include /etc/nginx/stream.d/*.conf;"
-    fi
+    if grep -qE '^[[:space:]]*stream[[:space:]]*\{' /etc/nginx/nginx.conf; then die "nginx.conf 已有 stream 块，请手动合并 include /etc/nginx/stream.d/*.conf;"; fi
     cat >> /etc/nginx/nginx.conf <<'EOF_NGINX_STREAM'
 
 stream {
@@ -402,7 +333,6 @@ stream {
 }
 EOF_NGINX_STREAM
   fi
-
   nginx -t || { warn "nginx -t 失败，准备回滚"; rollback_last || true; die "nginx 配置失败"; }
   systemctl reload nginx
   ok "443 SNI 分流完成"
@@ -482,46 +412,25 @@ upload_with_checks(){
   rclone copyto "$file" "$remote/$(basename "$file")" --progress
   rclone copyto "$sha" "$inv_remote/$(basename "$sha")" --progress
   ok "已上传：$remote/$(basename "$file")"
-  ok "SHA256：$inv_remote/$(basename "$sha")"
-}
-
-prune_remote(){
-  local remote="$1" keep="${2:-$RETENTION_COUNT}"
-  [[ "$keep" =~ ^[0-9]+$ ]] || keep=8
-  [[ "$keep" -gt 0 ]] || return 0
-  check_rclone_remote "$remote"
-  mapfile -t old < <(rclone lsf "$remote" --files-only | sort | head -n -"$keep" || true)
-  for f in "${old[@]:-}"; do
-    [[ -n "$f" ]] && rclone deletefile "$remote/$f" || true
-  done
 }
 
 backup_vps_now(){
-  need_root
-  install_deps
-  mkdir -p "$BACKUP_WORKDIR"
-  exec 9>"$LOCK_DIR/myvps-backup-vps.lock"
-  flock -n 9 || die "已有 VPS 备份在运行"
+  need_root; install_deps; mkdir -p "$BACKUP_WORKDIR"
+  exec 9>"$LOCK_DIR/myvps-backup-vps.lock"; flock -n 9 || die "已有 VPS 备份在运行"
   local ts dir tarfile encfile inventory
   ts="$(date +%F_%H%M%S)"; dir="$BACKUP_WORKDIR/vps-$ts"; mkdir -p "$dir"
   inventory="$dir/racknerd-vps-$ts.inventory.txt"
   { echo "VPS encrypted backup inventory"; echo "time=$ts"; echo "hostname=$(hostname)"; echo "remote=$VPS_BACKUP_REMOTE"; df -h; df -i; ss -tulnp || true; systemctl --failed || true; } > "$inventory"
   tarfile="$dir/racknerd-vps-$ts.tar.gz"; encfile="$tarfile.enc"
-  tar --one-file-system --acls --xattrs --numeric-owner --warning=no-file-changed --ignore-failed-read -czpf "$tarfile" / \
-    --exclude=/proc --exclude=/sys --exclude=/dev --exclude=/run --exclude=/tmp --exclude=/mnt --exclude=/media --exclude=/lost+found \
-    --exclude="$BACKUP_WORKDIR" --exclude=/root/blog-backups --exclude=/root/my-vps-backups --exclude=/var/cache/apt/archives || true
+  tar --one-file-system --acls --xattrs --numeric-owner --warning=no-file-changed --ignore-failed-read -czpf "$tarfile" / --exclude=/proc --exclude=/sys --exclude=/dev --exclude=/run --exclude=/tmp --exclude=/mnt --exclude=/media --exclude=/lost+found --exclude="$BACKUP_WORKDIR" --exclude=/root/my-vps-backups --exclude=/var/cache/apt/archives || true
   encrypt_file "$tarfile" "$encfile"; rm -f "$tarfile"
   upload_with_checks "$encfile" "$VPS_BACKUP_REMOTE" "$VPS_INVENTORY_REMOTE"
   rclone copyto "$inventory" "$VPS_INVENTORY_REMOTE/$(basename "$inventory")" --progress || true
-  prune_remote "$VPS_BACKUP_REMOTE" "$RETENTION_COUNT"
 }
 
 backup_blog_now(){
-  need_root
-  install_deps
-  mkdir -p "$BACKUP_WORKDIR"
-  exec 9>"$LOCK_DIR/myvps-backup-blog.lock"
-  flock -n 9 || die "已有 blog 备份在运行"
+  need_root; install_deps; mkdir -p "$BACKUP_WORKDIR"
+  exec 9>"$LOCK_DIR/myvps-backup-blog.lock"; flock -n 9 || die "已有 blog 备份在运行"
   local ts dir tarfile encfile inventory
   ts="$(date +%F_%H%M%S)"; dir="$BACKUP_WORKDIR/blog-$ts"; mkdir -p "$dir"
   inventory="$dir/blog-$ts.inventory.txt"
@@ -531,13 +440,10 @@ backup_blog_now(){
   encrypt_file "$tarfile" "$encfile"; rm -f "$tarfile"
   upload_with_checks "$encfile" "$BLOG_BACKUP_REMOTE" "$BLOG_INVENTORY_REMOTE"
   rclone copyto "$inventory" "$BLOG_INVENTORY_REMOTE/$(basename "$inventory")" --progress || true
-  prune_remote "$BLOG_BACKUP_REMOTE" "$RETENTION_COUNT"
 }
 
 setup_weekly_backups(){
-  need_root
-  install_deps
-  ensure_backup_pass
+  need_root; install_deps; ensure_backup_pass
   cat > /etc/cron.d/myvps-weekly-backups <<EOF_CRON
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -605,7 +511,7 @@ menu(){
       8) header; setup_weekly_backups; pause ;;
       9) header; client_tips; pause ;;
       10) header; show_logs; pause ;;
-      11) header; update_self; pause ;;
+      11) header; install_shortcut; pause ;;
       20) header; uninstall_vpn_only; pause ;;
       21) header; rollback_last; pause ;;
       0) exit 0 ;;
@@ -624,7 +530,7 @@ case "${1:-menu}" in
   backup-vps) backup_vps_now ;;
   backup-blog) backup_blog_now ;;
   setup-weekly-backups) setup_weekly_backups ;;
-  update) update_self ;;
+  update) install_shortcut ;;
   uninstall-vpn) uninstall_vpn_only ;;
   rollback) rollback_last ;;
   logs) show_logs ;;
