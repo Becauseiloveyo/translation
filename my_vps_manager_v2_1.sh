@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="2.1.3-owned"
+VERSION="2.1.4-owned"
 REPO="https://raw.githubusercontent.com/Becauseiloveyo/translation/main"
 SELF="/root/my_vps_manager.sh"
 BIN_LINK="/usr/local/bin/myvps"
@@ -246,10 +246,10 @@ preflight(){
 
   if [[ "$fail" -eq 0 ]]; then
     if [[ "$warn_count" -eq 0 ]]; then
-      echo "结论：可以继续。下一步选择 3，输入 YES 安装/重建 443 VPN。"
+      echo "结论：可以继续。下一步选择 3，输入 y 安装/重建 443 VPN。"
     else
       echo "结论：可以继续安装 VPN，但有 $warn_count 个非阻断警告；备份或网站状态建议后续单独确认。"
-      echo "下一步：确认你能接受这些警告后，选择 3，输入 YES。"
+      echo "下一步：确认你能接受这些警告后，选择 3，输入 y。"
     fi
   else
     echo "结论：不建议继续。当前有 $fail 个阻断问题，先修复上面标记为 [失败] 的项目。"
@@ -427,8 +427,11 @@ install_reality_443(){
   install_deps
   preflight
   echo
-  read -rp "确认安装/重建自有 Reality 443？输入 YES 继续: " ans
-  [[ "$ans" == "YES" ]] || die "已取消"
+  read -rp "确认安装/重建自有 Reality 443？输入 y 继续，输入 n 取消 [y/N]: " ans
+  case "${ans,,}" in
+    y|yes) ;;
+    *) die "已取消" ;;
+  esac
   backup_runtime_state
   write_xray_reality
   configure_nginx_443_split
