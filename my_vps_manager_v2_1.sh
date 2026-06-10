@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="2.1.2-owned"
+VERSION="2.1.3-owned"
 REPO="https://raw.githubusercontent.com/Becauseiloveyo/translation/main"
 SELF="/root/my_vps_manager.sh"
 BIN_LINK="/usr/local/bin/myvps"
@@ -62,11 +62,6 @@ header(){
 
 local_ipv4s(){
   ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | grep -Ev '^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.)' | sort -u || true
-}
-
-contains_line(){
-  local needle="$1"
-  grep -Fxq "$needle"
 }
 
 write_default_config(){
@@ -139,6 +134,9 @@ vps_info(){
 
 preflight(){
   need_root
+  local fail=0 warn_count=0
+  local nginx_stream_ok=0 port443_nginx_ok=0 vpn_dns_ok=0 rclone_ok=0 blog_ok=0 ad_ok=0 disk_ok=0 xray_existing=0
+
   echo "== 基础信息 =="; vps_info; echo
   echo "== 配置 =="
   echo "BLOG_DOMAIN=$BLOG_DOMAIN"
@@ -150,17 +148,31 @@ preflight(){
   echo "VPS_BACKUP_REMOTE=$VPS_BACKUP_REMOTE"
   echo "BLOG_BACKUP_REMOTE=$BLOG_BACKUP_REMOTE"
   echo
+
   echo "== 关键命令 =="
-  for c in nginx curl jq openssl tar rclone iptables systemctl ss dig ip awk sed; do has "$c" && echo "OK $c" || echo "MISS $c"; done
+  for c in nginx curl jq openssl tar rclone iptables systemctl ss dig ip awk sed; do
+    if has "$c"; then echo "OK $c"; else echo "MISS $c"; fail=$((fail+1)); fi
+  done
   echo
+
   echo "== nginx stream 支持 =="
-  if nginx -V 2>&1 | grep -q -- '--with-stream'; then echo "OK nginx static stream";
-  elif [[ -f /usr/lib/nginx/modules/ngx_stream_module.so ]]; then echo "OK nginx dynamic stream module exists";
-  else echo "WARN nginx stream not detected. Do not install VPN 443 until fixed."; fi
+  if nginx -V 2>&1 | grep -q -- '--with-stream'; then
+    echo "OK nginx static stream"
+    nginx_stream_ok=1
+  elif [[ -f /usr/lib/nginx/modules/ngx_stream_module.so ]]; then
+    echo "OK nginx dynamic stream module exists"
+    nginx_stream_ok=1
+  else
+    echo "FAIL nginx stream not detected. 不能安装 443 分流。"
+    fail=$((fail+1))
+  fi
   echo
+
   echo "== 当前监听 =="
   ss -tulnp | grep -E ':53\b|:80\b|:443\b|:10443\b|:24443\b|:3000\b|:8080\b|nginx|xray|node|AdGuardHome' || true
+  if ss -tulnp | grep -qE '0\.0\.0\.0:443.*nginx|\*:443.*nginx'; then port443_nginx_ok=1; else fail=$((fail+1)); fi
   echo
+
   echo "== 域名解析 =="
   local local_ips vpn_ips blog_ips ad_ips
   local_ips="$(local_ipv4s)"
@@ -172,19 +184,76 @@ preflight(){
   echo "$BLOG_DOMAIN:"; echo "${blog_ips:-unknown}"
   echo "$AD_DOMAIN:"; echo "${ad_ips:-unknown}"
   if [[ -n "$local_ips" && -n "$vpn_ips" ]]; then
-    if ! comm -12 <(echo "$local_ips" | sort) <(echo "$vpn_ips" | sort) | grep -q .; then
-      warn "$VPN_DOMAIN 没有解析到本机入站 IPv4。Reality 域名需要 DNS only/灰云。"
-    else
+    if comm -12 <(echo "$local_ips" | sort) <(echo "$vpn_ips" | sort) | grep -q .; then
       ok "$VPN_DOMAIN 已解析到本机入站 IPv4"
+      vpn_dns_ok=1
+    else
+      warn "$VPN_DOMAIN 没有解析到本机入站 IPv4。Reality 域名需要 DNS only/灰云。"
+      fail=$((fail+1))
     fi
+  else
+    warn "本机 IP 或 $VPN_DOMAIN 解析为空，无法判断 Reality 域名。"
+    fail=$((fail+1))
   fi
   echo
+
   echo "== rclone remote =="
-  has rclone && rclone listremotes || echo "rclone missing"
+  if has rclone; then
+    rclone listremotes || true
+    if rclone listremotes | grep -qx 'ggdrive:' && rclone listremotes | grep -qx 'gdrive:'; then
+      rclone_ok=1
+    else
+      warn "没有同时发现 ggdrive: 和 gdrive:，备份功能可能不可用。"
+      warn_count=$((warn_count+1))
+    fi
+  else
+    echo "rclone missing"
+    warn_count=$((warn_count+1))
+  fi
   echo
+
   echo "== HTTP 检查 =="
+  local blog_code ad_code
+  blog_code="$(curl -I -L --max-time 10 -o /dev/null -s -w '%{http_code}' "https://$BLOG_DOMAIN" || true)"
+  ad_code="$(curl -I -L --max-time 10 -o /dev/null -s -w '%{http_code}' "https://$AD_DOMAIN" || true)"
   curl -I --max-time 10 "https://$BLOG_DOMAIN" 2>/dev/null | sed -n '1,6p' || true
   curl -I --max-time 10 "https://$AD_DOMAIN" 2>/dev/null | sed -n '1,6p' || true
+  [[ "$blog_code" =~ ^(200|301|302|401|403)$ ]] && blog_ok=1 || { warn "$BLOG_DOMAIN HTTP 状态异常：${blog_code:-unknown}"; warn_count=$((warn_count+1)); }
+  [[ "$ad_code" =~ ^(200|301|302|401|403)$ ]] && ad_ok=1 || { warn "$AD_DOMAIN HTTP 状态异常：${ad_code:-unknown}"; warn_count=$((warn_count+1)); }
+  echo
+
+  echo "== 资源检查 =="
+  local disk_use mem_avail
+  disk_use="$(df -P / | awk 'NR==2{gsub(/%/,"",$5); print $5}')"
+  mem_avail="$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo 2>/dev/null || echo 0)"
+  echo "根分区使用率: ${disk_use:-unknown}%"
+  echo "可用内存: ${mem_avail:-unknown} MiB"
+  if [[ "${disk_use:-100}" -lt 85 ]]; then disk_ok=1; else warn "根分区使用率偏高，建议清理后再安装。"; warn_count=$((warn_count+1)); fi
+  if [[ "${mem_avail:-0}" -lt 100 ]]; then warn "可用内存偏低，但不一定阻止安装。"; warn_count=$((warn_count+1)); fi
+  [[ -x "$XRAY_BIN" ]] && xray_existing=1
+  echo
+
+  echo "== 预检总结 =="
+  [[ "$nginx_stream_ok" -eq 1 ]] && echo "[通过] nginx 支持 stream，可做 443 SNI 分流。" || echo "[失败] nginx 不支持 stream，不能继续安装 443 VPN。"
+  [[ "$port443_nginx_ok" -eq 1 ]] && echo "[通过] 当前公网 443 由 nginx 接管。" || echo "[失败] 当前 443 不是 nginx 或没有监听。"
+  [[ "$vpn_dns_ok" -eq 1 ]] && echo "[通过] $VPN_DOMAIN 已经灰云直连到本机入站 IPv4。" || echo "[失败] $VPN_DOMAIN 解析不满足 Reality 要求。"
+  [[ "$rclone_ok" -eq 1 ]] && echo "[通过] 已发现 ggdrive: 和 gdrive:，分离备份可用。" || echo "[警告] 备份 remote 不完整，不影响 VPN 安装，但会影响备份。"
+  [[ "$blog_ok" -eq 1 ]] && echo "[通过] $BLOG_DOMAIN 可访问。" || echo "[警告] $BLOG_DOMAIN 访问异常。"
+  [[ "$ad_ok" -eq 1 ]] && echo "[通过] $AD_DOMAIN 可访问。" || echo "[警告] $AD_DOMAIN 访问异常。"
+  [[ "$disk_ok" -eq 1 ]] && echo "[通过] 磁盘空间可接受。" || echo "[警告] 磁盘空间偏紧。"
+  [[ "$xray_existing" -eq 1 ]] && echo "[提示] Xray 已存在，安装时会复用现有二进制。" || echo "[提示] Xray 尚未安装，安装时会自动下载。"
+  echo
+
+  if [[ "$fail" -eq 0 ]]; then
+    if [[ "$warn_count" -eq 0 ]]; then
+      echo "结论：可以继续。下一步选择 3，输入 YES 安装/重建 443 VPN。"
+    else
+      echo "结论：可以继续安装 VPN，但有 $warn_count 个非阻断警告；备份或网站状态建议后续单独确认。"
+      echo "下一步：确认你能接受这些警告后，选择 3，输入 YES。"
+    fi
+  else
+    echo "结论：不建议继续。当前有 $fail 个阻断问题，先修复上面标记为 [失败] 的项目。"
+  fi
 }
 
 backup_runtime_state(){
@@ -500,7 +569,7 @@ menu(){
   while true; do
     header
     echo -e "${G}1${N}. 首次准备             依赖、配置文件、快捷命令"
-    echo -e "${G}2${N}. 预检 443 VPN 环境    不修改系统"
+    echo -e "${G}2${N}. 预检 443 VPN 环境    会给出最终结论，不修改系统"
     echo -e "${G}3${N}. 安装/重建 443 VPN   自有 Xray Reality"
     echo -e "${G}4${N}. 查看状态"
     echo -e "${G}5${N}. 查看客户端配置"
