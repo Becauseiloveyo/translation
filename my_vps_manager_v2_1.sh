@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="2.1.4-owned"
+VERSION="2.1.5-owned"
 REPO="https://raw.githubusercontent.com/Becauseiloveyo/translation/main"
 SELF="/root/my_vps_manager.sh"
 BIN_LINK="/usr/local/bin/myvps"
@@ -34,6 +34,9 @@ BACKUP_WORKDIR="/root/my-vps-backups"
 BLOG_ROOT="/root/my-b"
 RETENTION_COUNT="8"
 
+PREFLIGHT_FAIL=0
+PREFLIGHT_WARN=0
+
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
 
 if [[ -t 1 ]]; then
@@ -62,6 +65,14 @@ header(){
 
 local_ipv4s(){
   ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | grep -Ev '^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.)' | sort -u || true
+}
+
+http_code(){
+  curl -I -L --max-time 10 -o /dev/null -s -w '%{http_code}' "$1" 2>/dev/null || true
+}
+
+is_good_http(){
+  [[ "${1:-}" =~ ^(200|301|302|401|403)$ ]]
 }
 
 write_default_config(){
@@ -214,12 +225,12 @@ preflight(){
 
   echo "== HTTP 检查 =="
   local blog_code ad_code
-  blog_code="$(curl -I -L --max-time 10 -o /dev/null -s -w '%{http_code}' "https://$BLOG_DOMAIN" || true)"
-  ad_code="$(curl -I -L --max-time 10 -o /dev/null -s -w '%{http_code}' "https://$AD_DOMAIN" || true)"
+  blog_code="$(http_code "https://$BLOG_DOMAIN")"
+  ad_code="$(http_code "https://$AD_DOMAIN")"
   curl -I --max-time 10 "https://$BLOG_DOMAIN" 2>/dev/null | sed -n '1,6p' || true
   curl -I --max-time 10 "https://$AD_DOMAIN" 2>/dev/null | sed -n '1,6p' || true
-  [[ "$blog_code" =~ ^(200|301|302|401|403)$ ]] && blog_ok=1 || { warn "$BLOG_DOMAIN HTTP 状态异常：${blog_code:-unknown}"; warn_count=$((warn_count+1)); }
-  [[ "$ad_code" =~ ^(200|301|302|401|403)$ ]] && ad_ok=1 || { warn "$AD_DOMAIN HTTP 状态异常：${ad_code:-unknown}"; warn_count=$((warn_count+1)); }
+  is_good_http "$blog_code" && blog_ok=1 || { warn "$BLOG_DOMAIN HTTP 状态异常：${blog_code:-unknown}"; warn_count=$((warn_count+1)); }
+  is_good_http "$ad_code" && ad_ok=1 || { warn "$AD_DOMAIN HTTP 状态异常：${ad_code:-unknown}"; warn_count=$((warn_count+1)); }
   echo
 
   echo "== 资源检查 =="
@@ -254,6 +265,10 @@ preflight(){
   else
     echo "结论：不建议继续。当前有 $fail 个阻断问题，先修复上面标记为 [失败] 的项目。"
   fi
+
+  PREFLIGHT_FAIL="$fail"
+  PREFLIGHT_WARN="$warn_count"
+  return 0
 }
 
 backup_runtime_state(){
@@ -422,12 +437,35 @@ EOF_NGINX_STREAM
   ok "443 SNI 分流完成"
 }
 
+install_summary(){
+  echo
+  echo "== 安装结果总结 =="
+  local ok_count=0 fail_count=0 blog_code ad_code
+  if systemctl is-active --quiet "$XRAY_SERVICE"; then echo "[通过] Xray Reality 服务运行中。"; ok_count=$((ok_count+1)); else echo "[失败] Xray Reality 服务未运行。"; fail_count=$((fail_count+1)); fi
+  if ss -tulnp | grep -qE ':443\b.*nginx'; then echo "[通过] 公网 443 由 nginx stream 接管。"; ok_count=$((ok_count+1)); else echo "[失败] 443 监听异常。"; fail_count=$((fail_count+1)); fi
+  if ss -tulnp | grep -qE "127\.0\.0\.1:$LOCAL_HTTPS_PORT\b.*nginx"; then echo "[通过] 本地 HTTPS 后端 $LOCAL_HTTPS_PORT 正常。"; ok_count=$((ok_count+1)); else echo "[失败] 本地 HTTPS 后端 $LOCAL_HTTPS_PORT 未监听。"; fail_count=$((fail_count+1)); fi
+  if ss -tulnp | grep -qE "127\.0\.0\.1:$XRAY_LOCAL_PORT\b.*xray"; then echo "[通过] Xray 本地端口 $XRAY_LOCAL_PORT 正常。"; ok_count=$((ok_count+1)); else echo "[失败] Xray 本地端口 $XRAY_LOCAL_PORT 未监听。"; fail_count=$((fail_count+1)); fi
+  blog_code="$(http_code "https://$BLOG_DOMAIN")"; ad_code="$(http_code "https://$AD_DOMAIN")"
+  if is_good_http "$blog_code"; then echo "[通过] $BLOG_DOMAIN 可访问，HTTP $blog_code。"; ok_count=$((ok_count+1)); else echo "[警告] $BLOG_DOMAIN 访问异常，HTTP ${blog_code:-unknown}。"; fi
+  if is_good_http "$ad_code"; then echo "[通过] $AD_DOMAIN 可访问，HTTP $ad_code。"; ok_count=$((ok_count+1)); else echo "[警告] $AD_DOMAIN 访问异常，HTTP ${ad_code:-unknown}。"; fi
+  if grep -q '^vless://' "$XRAY_CLIENT" 2>/dev/null; then echo "[通过] 客户端 vless 链接已生成。"; ok_count=$((ok_count+1)); else echo "[失败] 客户端链接未生成。"; fail_count=$((fail_count+1)); fi
+  echo
+  if [[ "$fail_count" -eq 0 ]]; then
+    echo "结论：安装成功。下一步选菜单 5，复制 vless:// 链接导入客户端。"
+  else
+    echo "结论：安装存在 $fail_count 个失败项。建议先查看菜单 10 日志；必要时选 21 回滚。"
+  fi
+}
+
 install_reality_443(){
   need_root
   install_deps
   preflight
+  if [[ "${PREFLIGHT_FAIL:-1}" -ne 0 ]]; then
+    die "预检存在阻断问题，已停止安装。请先修复上面 [失败] 项后再安装。"
+  fi
   echo
-  read -rp "确认安装/重建自有 Reality 443？输入 y 继续，输入 n 取消 [y/N]: " ans
+  read -rp "本操作会修改 nginx 443 分流并重启 Xray，不会删除 blog/ad。继续？[y/N]: " ans
   case "${ans,,}" in
     y|yes) ;;
     *) die "已取消" ;;
@@ -435,11 +473,20 @@ install_reality_443(){
   backup_runtime_state
   write_xray_reality
   configure_nginx_443_split
-  status
+  install_summary
   show_client
 }
 
-show_client(){ [[ -f "$XRAY_CLIENT" ]] && cat "$XRAY_CLIENT" || warn "还没有客户端配置。"; }
+show_client(){
+  if [[ -f "$XRAY_CLIENT" ]] && grep -q '^vless://' "$XRAY_CLIENT"; then
+    echo "== 客户端导入链接 =="
+    grep '^vless://' "$XRAY_CLIENT" | head -1
+    echo
+    echo "复制整行导入 v2rayN / v2rayNG 即可。不要公开这行链接。"
+  else
+    warn "还没有客户端 vless 链接。请先安装/重建 443 VPN。"
+  fi
+}
 
 status(){
   echo "== 服务失败项 =="; systemctl --failed || true; echo
@@ -451,6 +498,25 @@ status(){
   echo "== 网站检查 =="
   curl -I --max-time 10 "https://$BLOG_DOMAIN" 2>/dev/null | sed -n '1,5p' || true
   curl -I --max-time 10 "https://$AD_DOMAIN" 2>/dev/null | sed -n '1,5p' || true
+}
+
+diagnose(){
+  echo "== 一键诊断 =="
+  systemctl is-active --quiet nginx && echo "[正常] nginx 运行中" || echo "[异常] nginx 未运行"
+  systemctl is-active --quiet "$XRAY_SERVICE" && echo "[正常] Xray Reality 运行中" || echo "[异常] Xray Reality 未运行"
+  systemctl is-active --quiet fail2ban && echo "[正常] fail2ban 运行中" || echo "[警告] fail2ban 未运行"
+  ss -tulnp | grep -qE ':443\b.*nginx' && echo "[正常] 443 由 nginx 监听" || echo "[异常] 443 监听异常"
+  ss -tulnp | grep -qE "127\.0\.0\.1:$XRAY_LOCAL_PORT\b.*xray" && echo "[正常] Xray 本地端口 $XRAY_LOCAL_PORT 正常" || echo "[异常] Xray 本地端口 $XRAY_LOCAL_PORT 未监听"
+  ss -tulnp | grep -qE ':3000\b.*node' && echo "[正常] blog 后端 3000 存在" || echo "[警告] blog 后端 3000 未发现"
+  ss -tulnp | grep -qE '127\.0\.0\.1:8080\b.*AdGuardHome' && echo "[正常] AdGuardHome 8080 存在" || echo "[警告] AdGuardHome 8080 未发现"
+  local blog_code ad_code
+  blog_code="$(http_code "https://$BLOG_DOMAIN")"; ad_code="$(http_code "https://$AD_DOMAIN")"
+  is_good_http "$blog_code" && echo "[正常] blog HTTPS 可访问，HTTP $blog_code" || echo "[异常] blog HTTPS 异常，HTTP ${blog_code:-unknown}"
+  is_good_http "$ad_code" && echo "[正常] AdGuard HTTPS 可访问，HTTP $ad_code" || echo "[异常] AdGuard HTTPS 异常，HTTP ${ad_code:-unknown}"
+  if rclone listremotes 2>/dev/null | grep -qx 'ggdrive:' && rclone listremotes 2>/dev/null | grep -qx 'gdrive:'; then echo "[正常] rclone gdrive/ggdrive 都存在"; else echo "[警告] rclone remote 不完整"; fi
+  grep -q '^vless://' "$XRAY_CLIENT" 2>/dev/null && echo "[正常] 客户端 vless 链接已生成" || echo "[提示] 客户端链接未生成"
+  echo
+  echo "诊断完成。看到 [异常] 的项目优先处理；[警告] 不一定影响 VPN。"
 }
 
 uninstall_vpn_only(){
@@ -490,6 +556,30 @@ encrypt_file(){
   chmod 600 "$dst"
 }
 
+prune_remote(){
+  local remote="$1" keep="${2:-$RETENTION_COUNT}"
+  [[ "$keep" =~ ^[0-9]+$ ]] || keep=8
+  [[ "$keep" -ge 1 ]] || keep=8
+  check_rclone_remote "$remote"
+  local files count remove_count i f base
+  mapfile -t files < <(rclone lsf "$remote" --files-only 2>/dev/null | grep -E '\.enc$' | sort || true)
+  count="${#files[@]}"
+  if (( count <= keep )); then
+    ok "远程备份保留检查：$remote 当前 $count 份，不需要清理。"
+    return
+  fi
+  remove_count=$((count - keep))
+  for ((i=0; i<remove_count; i++)); do
+    f="${files[$i]}"
+    base="${f%.enc}"
+    warn "清理旧远程备份：$remote/$f"
+    rclone deletefile "$remote/$f" || true
+    rclone deletefile "$remote/$f.sha256" || true
+    rclone deletefile "$remote/$base.sha256" || true
+  done
+  ok "远程备份已保留最近 $keep 份：$remote"
+}
+
 upload_with_checks(){
   local file="$1" remote="$2" inv_remote="$3" sha="$file.sha256"
   sha256sum "$file" > "$sha"
@@ -499,6 +589,7 @@ upload_with_checks(){
   rclone copyto "$file" "$remote/$(basename "$file")" --progress
   rclone copyto "$sha" "$inv_remote/$(basename "$sha")" --progress
   ok "已上传：$remote/$(basename "$file")"
+  prune_remote "$remote" "$RETENTION_COUNT"
 }
 
 backup_vps_now(){
@@ -509,10 +600,12 @@ backup_vps_now(){
   inventory="$dir/racknerd-vps-$ts.inventory.txt"
   { echo "VPS encrypted backup inventory"; echo "time=$ts"; echo "hostname=$(hostname)"; echo "remote=$VPS_BACKUP_REMOTE"; df -h; df -i; ss -tulnp || true; systemctl --failed || true; } > "$inventory"
   tarfile="$dir/racknerd-vps-$ts.tar.gz"; encfile="$tarfile.enc"
-  tar --one-file-system --acls --xattrs --numeric-owner --warning=no-file-changed --ignore-failed-read -czpf "$tarfile" / --exclude=/proc --exclude=/sys --exclude=/dev --exclude=/run --exclude=/tmp --exclude=/mnt --exclude=/media --exclude=/lost+found --exclude="$BACKUP_WORKDIR" --exclude=/root/my-vps-backups --exclude=/var/cache/apt/archives || true
+  tar --one-file-system --acls --xattrs --numeric-owner --warning=no-file-changed --ignore-failed-read -czpf "$tarfile" / --exclude=/proc --exclude=/sys --exclude=/dev --exclude=/run --exclude=/tmp --exclude=/mnt --exclude=/media --exclude=/lost+found --exclude="$BACKUP_WORKDIR" --exclude=/root/my-vps-backups --exclude=/var/cache --exclude=/var/log/journal --exclude=/root/.cache --exclude=/root/.npm --exclude=/root/.pm2/logs --exclude=/var/cache/apt/archives || true
   encrypt_file "$tarfile" "$encfile"; rm -f "$tarfile"
   upload_with_checks "$encfile" "$VPS_BACKUP_REMOTE" "$VPS_INVENTORY_REMOTE"
   rclone copyto "$inventory" "$VPS_INVENTORY_REMOTE/$(basename "$inventory")" --progress || true
+  rm -rf "$dir"
+  ok "VPS 本地临时备份目录已清理。"
 }
 
 backup_blog_now(){
@@ -523,10 +616,12 @@ backup_blog_now(){
   inventory="$dir/blog-$ts.inventory.txt"
   { echo "Blog encrypted backup inventory"; echo "time=$ts"; echo "remote=$BLOG_BACKUP_REMOTE"; du -sh "$BLOG_ROOT" /etc/nginx /root/.pm2 2>/dev/null || true; pm2 list 2>/dev/null || true; } > "$inventory"
   tarfile="$dir/blog-$ts.tar.gz"; encfile="$tarfile.enc"
-  tar --warning=no-file-changed --ignore-failed-read -czpf "$tarfile" "$BLOG_ROOT" /root/.pm2 /etc/nginx /var/www /nginxweb 2>/dev/null || true
+  tar --warning=no-file-changed --ignore-failed-read -czpf "$tarfile" "$BLOG_ROOT" /root/.pm2 /etc/nginx /var/www /nginxweb --exclude=/root/.pm2/logs 2>/dev/null || true
   encrypt_file "$tarfile" "$encfile"; rm -f "$tarfile"
   upload_with_checks "$encfile" "$BLOG_BACKUP_REMOTE" "$BLOG_INVENTORY_REMOTE"
   rclone copyto "$inventory" "$BLOG_INVENTORY_REMOTE/$(basename "$inventory")" --progress || true
+  rm -rf "$dir"
+  ok "blog 本地临时备份目录已清理。"
 }
 
 setup_weekly_backups(){
@@ -551,14 +646,7 @@ show_logs(){
 client_tips(){
   cat <<EOF_TIPS
 v2rayN / v2rayNG：
-地址：$VPN_DOMAIN
-端口：443
-协议：VLESS
-安全：Reality
-SNI：$REALITY_SNI
-Fingerprint：chrome
-Flow：xtls-rprx-vision
-Mux：关闭
+菜单 5 只会输出 vless:// 导入链接。复制整行导入即可。
 
 Cloudflare：
 - $VPN_DOMAIN 必须 DNS only/灰云。
@@ -575,13 +663,14 @@ menu(){
     echo -e "${G}2${N}. 预检 443 VPN 环境    会给出最终结论，不修改系统"
     echo -e "${G}3${N}. 安装/重建 443 VPN   自有 Xray Reality"
     echo -e "${G}4${N}. 查看状态"
-    echo -e "${G}5${N}. 查看客户端配置"
+    echo -e "${G}5${N}. 查看客户端链接       只输出 vless:// 链接"
     echo -e "${G}6${N}. 立即备份 VPS         加密上传到 ggdrive"
     echo -e "${G}7${N}. 立即备份 blog        加密上传到 gdrive"
     echo -e "${G}8${N}. 配置每周分离备份"
     echo -e "${G}9${N}. 客户端/Cloudflare 建议"
     echo -e "${G}10${N}. 查看日志"
     echo -e "${G}11${N}. 更新本脚本"
+    echo -e "${G}12${N}. 一键诊断             精简判断关键服务"
     echo -e "${R}20${N}. 卸载 VPN 部分       不动 blog/ad/pm2"
     echo -e "${R}21${N}. 回滚上一次 443/VPN 修改"
     echo -e "${G}0${N}. 退出"
@@ -599,6 +688,7 @@ menu(){
       9) header; client_tips; pause ;;
       10) header; show_logs; pause ;;
       11) header; install_shortcut; pause ;;
+      12) header; diagnose; pause ;;
       20) header; uninstall_vpn_only; pause ;;
       21) header; rollback_last; pause ;;
       0) exit 0 ;;
@@ -617,9 +707,10 @@ case "${1:-menu}" in
   backup-vps) backup_vps_now ;;
   backup-blog) backup_blog_now ;;
   setup-weekly-backups) setup_weekly_backups ;;
+  diagnose|diag) diagnose ;;
   update) install_shortcut ;;
   uninstall-vpn) uninstall_vpn_only ;;
   rollback) rollback_last ;;
   logs) show_logs ;;
-  *) echo "用法: $0 {menu|install-base|preflight|install-vpn|status|show-client|backup-vps|backup-blog|setup-weekly-backups|update|uninstall-vpn|rollback|logs}"; exit 1 ;;
+  *) echo "用法: $0 {menu|install-base|preflight|install-vpn|status|show-client|backup-vps|backup-blog|setup-weekly-backups|diagnose|update|uninstall-vpn|rollback|logs}"; exit 1 ;;
 esac
