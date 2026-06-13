@@ -1,0 +1,211 @@
+// Becauseiloveyo personal GKD subscription
+// Import URL:
+// https://raw.githubusercontent.com/Becauseiloveyo/subscription/main/gkd.json5
+{
+  id: 2026061301,
+  name: 'Becauseiloveyo 自用 GKD 订阅',
+  version: 1,
+  author: 'Becauseiloveyo',
+  updateUrl: 'https://raw.githubusercontent.com/Becauseiloveyo/subscription/main/gkd.json5',
+  checkUpdateUrl: 'https://raw.githubusercontent.com/Becauseiloveyo/subscription/main/gkd.version.json5',
+  supportUri: 'https://github.com/Becauseiloveyo/subscription',
+  categories: [
+    {
+      key: 0,
+      name: '开屏广告',
+    },
+    {
+      key: 1,
+      name: '弹窗处理',
+      enable: false,
+    },
+    {
+      key: 2,
+      name: '快捷确认',
+      enable: false,
+    },
+  ],
+  globalGroups: [
+    {
+      key: 0,
+      name: '开屏广告-通用跳过',
+      desc: '仅在进入应用后的短时间内匹配明确的跳过按钮，降低长期扫描和误触风险。',
+      enable: true,
+      fastQuery: true,
+      matchTime: 10000,
+      actionMaximum: 1,
+      resetMatch: 'app',
+      actionCd: 1000,
+      rules: [
+        {
+          key: 0,
+          name: '精确文本：跳过',
+          matches: '[text="跳过"][visibleToUser=true]',
+        },
+        {
+          key: 1,
+          name: '短文本：包含跳过',
+          matches: '[text*="跳过"][text.length<8][visibleToUser=true]',
+        },
+        {
+          key: 2,
+          name: '英文 Skip',
+          matches: '[text~="(?i)^skip(\\s|[0-9])*$"][visibleToUser=true]',
+        },
+        {
+          key: 3,
+          name: '倒计时跳过',
+          matches: '[text~="^.*[0-9]+(s|秒).*跳过.*$"][visibleToUser=true]',
+        },
+      ],
+    },
+    {
+      key: 10,
+      name: '弹窗处理-明确关闭按钮',
+      desc: '默认关闭。只匹配明显关闭、取消、以后再说等按钮；建议确认快照后再启用。',
+      enable: false,
+      fastQuery: true,
+      matchTime: 8000,
+      actionMaximum: 2,
+      resetMatch: 'activity',
+      actionCd: 1200,
+      rules: [
+        {
+          key: 0,
+          name: '关闭',
+          matches: '[text="关闭"][visibleToUser=true]',
+        },
+        {
+          key: 1,
+          name: '以后再说',
+          matches: '[text="以后再说"][visibleToUser=true]',
+        },
+        {
+          key: 2,
+          name: '暂不',
+          matches: '[text="暂不"][visibleToUser=true]',
+        },
+        {
+          key: 3,
+          name: '暂不更新',
+          matches: '[text="暂不更新"][visibleToUser=true]',
+        },
+        {
+          key: 4,
+          name: '叉号关闭',
+          matches: '[text="×"][visibleToUser=true]',
+        },
+      ],
+    },
+    {
+      key: 20,
+      name: '弹窗处理-青少年模式提示',
+      desc: '默认关闭。用于关闭常见青少年模式、守护模式、未成年人提示等弹窗，可能误触，按需启用。',
+      enable: false,
+      fastQuery: true,
+      matchTime: 8000,
+      actionMaximum: 2,
+      resetMatch: 'activity',
+      actionCd: 1200,
+      rules: [
+        {
+          key: 0,
+          name: '我知道了',
+          matches: '[text="我知道了"][visibleToUser=true]',
+        },
+        {
+          key: 1,
+          name: '知道了',
+          matches: '[text="知道了"][visibleToUser=true]',
+        },
+        {
+          key: 2,
+          name: '暂不开启',
+          matches: '[text="暂不开启"][visibleToUser=true]',
+        },
+      ],
+    },
+  ],
+  apps: [
+    {
+      id: 'com.tencent.mm',
+      name: '微信',
+      groups: [
+        {
+          key: 0,
+          name: '快捷确认-电脑登录确认',
+          desc: '默认关闭。仅供自用，建议抓取自己的登录确认快照后再长期启用。',
+          enable: false,
+          fastQuery: true,
+          matchTime: 10000,
+          actionMaximum: 1,
+          resetMatch: 'activity',
+          rules: [
+            {
+              key: 0,
+              name: '登录',
+              matches: '[text="登录"][visibleToUser=true]',
+            },
+            {
+              key: 1,
+              name: '进入微信',
+              matches: '[text="进入微信"][visibleToUser=true]',
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'tv.danmaku.bili',
+      name: '哔哩哔哩',
+      groups: [
+        {
+          key: 0,
+          name: '弹窗处理-青少年模式提示',
+          desc: '默认关闭。比全局规则更适合在哔哩哔哩内单独启用。',
+          enable: false,
+          fastQuery: true,
+          matchTime: 8000,
+          actionMaximum: 2,
+          resetMatch: 'activity',
+          rules: [
+            {
+              key: 0,
+              matches: '[text="我知道了"][visibleToUser=true]',
+            },
+            {
+              key: 1,
+              matches: '[text="暂不开启"][visibleToUser=true]',
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'com.baidu.netdisk',
+      name: '百度网盘',
+      groups: [
+        {
+          key: 0,
+          name: '弹窗处理-会员活动弹窗',
+          desc: '默认关闭。只处理常见的明确负向按钮，按需启用。',
+          enable: false,
+          fastQuery: true,
+          matchTime: 8000,
+          actionMaximum: 2,
+          resetMatch: 'activity',
+          rules: [
+            {
+              key: 0,
+              matches: '[text="以后再说"][visibleToUser=true]',
+            },
+            {
+              key: 1,
+              matches: '[text="暂不"][visibleToUser=true]',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
