@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, DatabaseZap, Languages, Plus, Search, Star } from "lucide-react";
+import { ArrowRight, BookOpen, DatabaseZap, Languages, Plus, Search, Star, Volume2 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { EmptyState } from "../components/EmptyState";
 import { PageKey } from "../components/AppShell";
@@ -20,6 +20,7 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const enabledDictionaries = store.userDictionaries.filter((dictionary) => dictionary.enabled).length;
+  const enabledOnlineDictionaries = store.apiProviders.filter((provider) => provider.enabled && provider.useFor.includes("dictionary")).length;
   const queryKind = useMemo(() => getQueryKind(query), [query]);
 
   async function handleLookup(event: FormEvent) {
@@ -69,6 +70,19 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
     void runLookup(word);
   }
 
+  function playPronunciation(locale: "en-US" | "en-GB") {
+    if (!entry) {
+      return;
+    }
+    const audioUrl = locale === "en-US" ? entry.audioUS ?? entry.audioUK : entry.audioUK ?? entry.audioUS;
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      void audio.play().catch(() => speakWord(entry.headword, locale));
+      return;
+    }
+    speakWord(entry.headword, locale);
+  }
+
   return (
     <section className="page dictionary-focus-page">
       <header className="translate-titlebar">
@@ -95,7 +109,10 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
             <div className="panel-title">输入单词</div>
             <div className="muted small">推荐查单个英文词；检测到句子时可以直接跳转到翻译。</div>
           </div>
-          <span className="chip good">{enabledDictionaries} 本词典启用</span>
+          <div className="row">
+            <span className="chip good">{enabledOnlineDictionaries} 个在线词典</span>
+            <span className="chip">{enabledDictionaries} 本本地词典</span>
+          </div>
         </div>
         <form
           className="search-row"
@@ -138,7 +155,7 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
           <div className="panel-header">
             <div>
               <div className="panel-title">词条结果</div>
-              <div className="muted small">释义、音标、例句会集中显示在这里。</div>
+              <div className="muted small">释义、音标、例句会集中显示在这里。发音优先使用词典音频，失败时使用系统 TTS。</div>
             </div>
             {entry ? <span className="chip good">{entry.source ?? "Local"}</span> : null}
           </div>
@@ -150,8 +167,24 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
                   <div>
                     <div className="word-title">{entry.headword}</div>
                     <div className="phonetic-row">
-                      {entry.phoneticUS ? <span>US {entry.phoneticUS}</span> : null}
-                      {entry.phoneticUK ? <span>UK {entry.phoneticUK}</span> : null}
+                      {entry.phoneticUS ? (
+                        <button className="chip-button" type="button" onClick={() => playPronunciation("en-US")} title="播放美式发音">
+                          US {entry.phoneticUS}
+                          <Volume2 size={14} aria-hidden="true" />
+                        </button>
+                      ) : null}
+                      {entry.phoneticUK ? (
+                        <button className="chip-button" type="button" onClick={() => playPronunciation("en-GB")} title="播放英式发音">
+                          UK {entry.phoneticUK}
+                          <Volume2 size={14} aria-hidden="true" />
+                        </button>
+                      ) : null}
+                      {!entry.phoneticUS && !entry.phoneticUK ? (
+                        <button className="chip-button" type="button" onClick={() => playPronunciation("en-US")} title="使用系统发音">
+                          发音
+                          <Volume2 size={14} aria-hidden="true" />
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                   <button className="button" type="button" onClick={addToVocabulary}>
@@ -177,7 +210,7 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
                 </div>
               </div>
             ) : (
-              <EmptyState title="先输入一个单词" body="未导入个人词典时会使用 mock 词典兜底。" />
+              <EmptyState title="先输入一个单词" body="查询顺序：本地词典 → 在线官方/开放词典 → Mock 兜底。" />
             )}
           </div>
         </section>
@@ -223,7 +256,7 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
         <div className="item-head">
           <div>
             <div className="panel-title">个人词典</div>
-            <div className="muted small">导入的词典会优先参与查询；没有词典时保留 mock 兜底。</div>
+            <div className="muted small">导入的词典会优先参与查询；没有词典时保留在线词典与 mock 兜底。</div>
           </div>
           <span className="chip">{store.dictionaryEntries.length} entries</span>
         </div>
@@ -258,11 +291,22 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
             ))}
           </div>
         ) : (
-          <EmptyState title="未导入个人词典" body="可以先用内置 mock 词典测试查词流程。" />
+          <EmptyState title="未导入个人词典" body="可以先用 Free Dictionary API 或官方 API 测试查词流程。" />
         )}
       </section>
     </section>
   );
+}
+
+function speakWord(word: string, locale: "en-US" | "en-GB") {
+  if (!("speechSynthesis" in window)) {
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(word);
+  utterance.lang = locale;
+  utterance.rate = 0.9;
+  window.speechSynthesis.speak(utterance);
 }
 
 function getQueryKind(query: string) {
