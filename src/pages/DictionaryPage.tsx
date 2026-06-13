@@ -97,7 +97,11 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
           </div>
           <span className="chip good">{enabledDictionaries} 本词典启用</span>
         </div>
-        <form className="search-row" onSubmit={handleLookup}>
+        <form
+          className="search-row"
+          style={{ gridTemplateColumns: "auto minmax(0, 1fr) auto" }}
+          onSubmit={handleLookup}
+        >
           <Search size={20} aria-hidden="true" />
           <input
             id="dictionary-query"
