@@ -18,21 +18,21 @@ type NavItem = {
   label: string;
   shortLabel?: string;
   icon: typeof Languages;
-  group: "home" | "primary" | "library" | "system";
+  group: "home" | "core" | "study" | "advanced" | "system";
 };
 
 const navItems: NavItem[] = [
   { id: "home", label: "首页", icon: Home, group: "home" },
-  { id: "translate", label: "翻译", icon: Languages, group: "primary" },
-  { id: "dictionary", label: "词典", icon: BookOpen, group: "primary" },
-  { id: "vocabulary", label: "词汇本", shortLabel: "词汇", icon: Star, group: "primary" },
-  { id: "glossary", label: "术语表", shortLabel: "术语", icon: Sparkles, group: "library" },
-  { id: "sources", label: "词典来源", shortLabel: "来源", icon: DatabaseZap, group: "library" },
-  { id: "history", label: "历史", icon: Clock, group: "library" },
-  { id: "settings", label: "设置", icon: Settings, group: "system" }
+  { id: "dictionary", label: "查词", icon: BookOpen, group: "core" },
+  { id: "translate", label: "翻译", icon: Languages, group: "core" },
+  { id: "vocabulary", label: "词汇本", shortLabel: "词汇", icon: Star, group: "study" },
+  { id: "glossary", label: "术语表", shortLabel: "术语", icon: Sparkles, group: "advanced" },
+  { id: "history", label: "历史", icon: Clock, group: "advanced" },
+  { id: "sources", label: "词典来源", shortLabel: "来源", icon: DatabaseZap, group: "advanced" },
+  { id: "settings", label: "我的", icon: Settings, group: "system" }
 ];
 
-const mobileNav = navItems.filter((item) => ["translate", "dictionary", "vocabulary", "history", "settings"].includes(item.id));
+const mobileNav = navItems.filter((item) => ["home", "dictionary", "translate", "vocabulary", "settings"].includes(item.id));
 
 type AppShellProps = {
   currentPage: PageKey;
@@ -52,12 +52,13 @@ export function AppShell({ currentPage, onPageChange, children }: AppShellProps)
           </div>
           <div>
             <div className="brand-title">LiteDict</div>
-            <div className="brand-subtitle">个人翻译词典</div>
+            <div className="brand-subtitle">查词优先 · 顺手翻译</div>
           </div>
         </button>
 
-        <NavGroup title="主入口" items={navItems.filter((item) => item.group === "primary")} currentPage={currentPage} onPageChange={onPageChange} />
-        <NavGroup title="资料" items={navItems.filter((item) => item.group === "library")} currentPage={currentPage} onPageChange={onPageChange} />
+        <NavGroup title="核心功能" items={navItems.filter((item) => item.group === "core")} currentPage={currentPage} onPageChange={onPageChange} />
+        <NavGroup title="学习" items={navItems.filter((item) => item.group === "study")} currentPage={currentPage} onPageChange={onPageChange} />
+        <NavGroup title="更多" items={navItems.filter((item) => item.group === "advanced")} currentPage={currentPage} onPageChange={onPageChange} />
         <NavGroup title="偏好" items={navItems.filter((item) => item.group === "system")} currentPage={currentPage} onPageChange={onPageChange} />
       </aside>
 
