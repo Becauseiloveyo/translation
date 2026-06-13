@@ -89,7 +89,7 @@ class OxfordDictionaryProvider implements DictionaryProvider {
       return null;
     }
     if (!this.config.appId || !this.config.apiKeyEncrypted) {
-      throw new Error("Oxford Dictionaries 需要 app_id 和 app_key。请在设置里填写。\n");
+      throw new Error("Oxford Dictionaries 需要 app_id 和 app_key。请在设置里填写。");
     }
 
     const lang = this.config.language ?? "en-gb";
@@ -159,8 +159,6 @@ type FreeDictionaryPhonetic = {
 type FreeDictionaryDefinition = {
   definition?: string;
   example?: string;
-  synonyms?: string[];
-  antonyms?: string[];
 };
 
 type FreeDictionaryMeaning = {
@@ -382,8 +380,8 @@ function merriamAudioUrl(audio: string): string {
 function cleanMerriamText(text: string): string {
   return text
     .replace(/\{bc\}/g, ": ")
-    .replace(/\{/?it\}/g, "")
-    .replace(/\{/?wi\}/g, "")
+    .replace(/\{\/?it\}/g, "")
+    .replace(/\{\/?wi\}/g, "")
     .replace(/\{[^}]+\|([^}|]+)(?:\|[^}]*)?\}/g, "$1")
     .replace(/\{[^}]+\}/g, "")
     .replace(/\s+/g, " ")
