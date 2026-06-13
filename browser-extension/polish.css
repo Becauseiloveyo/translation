@@ -1,0 +1,211 @@
+:root {
+  --bg: #f3f7fd;
+  --panel: #ffffff;
+  --panel-soft: #f7faff;
+  --text: #172033;
+  --muted: #647086;
+  --line: #dfe7f2;
+  --accent: #2878f0;
+  --accent-strong: #1556b8;
+  --accent-soft: #e8f1ff;
+  --shadow: 0 10px 30px rgba(42, 93, 156, 0.12);
+  --shadow-lift: 0 16px 38px rgba(42, 93, 156, 0.18);
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  background:
+    radial-gradient(circle at 100% 0, rgba(40, 120, 240, 0.12), transparent 220px),
+    var(--bg);
+  font-family: Roboto, "Noto Sans SC", "MiSans", "HarmonyOS Sans SC", "PingFang SC", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+textarea,
+input,
+select,
+.popup-card,
+.history-item,
+.provider-pill {
+  transition:
+    background-color 140ms cubic-bezier(0.2, 0, 0, 1),
+    border-color 140ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 220ms cubic-bezier(0.2, 0, 0, 1),
+    transform 140ms cubic-bezier(0.2, 0, 0, 1),
+    color 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+button:active,
+.history-item:active {
+  transform: scale(0.975);
+}
+
+.popup {
+  width: 420px;
+  max-height: 640px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 16px 16px 18px;
+}
+
+.popup-header {
+  min-height: 74px;
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 1px solid rgba(223, 231, 242, 0.8);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(111, 168, 255, 0.28), transparent 120px),
+    linear-gradient(135deg, var(--accent-soft), #fff);
+  box-shadow: var(--shadow);
+}
+
+.popup-header h1 {
+  font-size: 23px;
+  letter-spacing: -0.03em;
+}
+
+.icon-button {
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 6px 18px rgba(40, 120, 240, 0.12);
+}
+
+.popup-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.compact-field span,
+.field span,
+.card-title {
+  color: var(--muted);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+textarea,
+input,
+select {
+  min-height: 42px;
+  border-radius: 16px;
+  border-color: rgba(223, 231, 242, 0.95);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+textarea:focus,
+input:focus,
+select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(40, 120, 240, 0.13);
+}
+
+button {
+  min-height: 38px;
+  border-radius: 15px;
+  font-weight: 760;
+}
+
+button:hover {
+  border-color: rgba(40, 120, 240, 0.42);
+  box-shadow: 0 6px 18px rgba(40, 120, 240, 0.1);
+}
+
+button.primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--accent), #5f9df8);
+  box-shadow: 0 10px 22px rgba(40, 120, 240, 0.24);
+}
+
+button.ghost {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.provider-pill {
+  border-color: rgba(40, 120, 240, 0.16);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  box-shadow: 0 6px 16px rgba(40, 120, 240, 0.08);
+}
+
+.popup-card,
+.panel {
+  border-color: rgba(223, 231, 242, 0.86);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+}
+
+.popup-card:hover,
+.history-item:hover {
+  box-shadow: var(--shadow-lift);
+}
+
+.popup-card textarea {
+  min-height: 108px;
+  border-radius: 18px;
+  background: var(--panel-soft);
+}
+
+.result-text {
+  max-height: 190px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 18px;
+  background: var(--panel-soft);
+  padding: 12px;
+  font-size: 15px;
+  line-height: 1.7;
+  scrollbar-width: thin;
+}
+
+.status {
+  padding: 0 4px;
+}
+
+.history-section {
+  padding-bottom: 2px;
+}
+
+.history-list {
+  max-height: 238px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+
+.history-item {
+  border-color: rgba(223, 231, 242, 0.86);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 10px 12px;
+}
+
+.history-item:hover {
+  background: var(--accent-soft);
+  border-color: rgba(40, 120, 240, 0.28);
+}
+
+.history-source {
+  font-size: 13px;
+}
+
+.history-translated,
+.history-meta,
+.history-empty {
+  font-size: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+  }
+}
