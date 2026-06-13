@@ -2,6 +2,7 @@ import { PlugZap, Plus, Save, Trash2 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/PageHeader";
+import { createDictionaryProvider, canUseRemoteDictionaryProvider } from "../services/dictionary/remoteDictionaryProviders";
 import { resetStore, upsertProvider } from "../services/storage/localStore";
 import { PageProps } from "../types/app";
 import { ApiProvider, AppSettings, ProviderPurpose, ProviderType } from "../types/models";
@@ -12,8 +13,10 @@ type ProviderForm = {
   name: string;
   type: ProviderType;
   baseUrl: string;
+  appId: string;
   apiKey: string;
   model: string;
+  language: string;
   enabled: boolean;
   priority: number;
   defaultTargetLang: string;
@@ -24,8 +27,10 @@ const emptyProviderForm: ProviderForm = {
   name: "",
   type: "openai",
   baseUrl: "",
+  appId: "",
   apiKey: "",
   model: "",
+  language: "en",
   enabled: true,
   priority: 20,
   defaultTargetLang: "zh",
@@ -33,6 +38,7 @@ const emptyProviderForm: ProviderForm = {
 };
 
 const purposes: ProviderPurpose[] = ["translate", "dictionary", "explain", "ocr"];
+const providerTypes: ProviderType[] = ["openai", "free_dictionary", "oxford", "merriam_webster", "deepl", "google", "custom", "mock"];
 
 export function SettingsPage({ store, setStore }: PageProps) {
   const [providerForm, setProviderForm] = useState<ProviderForm>(emptyProviderForm);
@@ -65,8 +71,10 @@ export function SettingsPage({ store, setStore }: PageProps) {
       name: providerForm.name.trim(),
       type: providerForm.type,
       baseUrl: providerForm.baseUrl.trim() || undefined,
+      appId: providerForm.appId.trim() || existing?.appId,
       apiKeyEncrypted: providerForm.apiKey.trim() || existing?.apiKeyEncrypted,
       model: providerForm.model.trim() || undefined,
+      language: providerForm.language.trim() || undefined,
       enabled: providerForm.enabled,
       priority: providerForm.priority,
       useFor: providerForm.useFor,
@@ -84,8 +92,10 @@ export function SettingsPage({ store, setStore }: PageProps) {
       name: provider.name,
       type: provider.type,
       baseUrl: provider.baseUrl ?? "",
+      appId: provider.appId ?? "",
       apiKey: "",
       model: provider.model ?? "",
+      language: provider.language ?? "",
       enabled: provider.enabled,
       priority: provider.priority,
       defaultTargetLang: provider.defaultTargetLang ?? "",
@@ -106,6 +116,20 @@ export function SettingsPage({ store, setStore }: PageProps) {
 
   async function testProvider(provider: ApiProvider) {
     setTestMessage("");
+    if (provider.useFor.includes("dictionary") && ["free_dictionary", "oxford", "merriam_webster"].includes(provider.type)) {
+      if (!canUseRemoteDictionaryProvider(provider)) {
+        setTestMessage(`${provider.name} 缺少必填凭据。Oxford 需要 app_id + app_key；Merriam-Webster 需要 API key。`);
+        return;
+      }
+      try {
+        const entry = await createDictionaryProvider(provider).lookup({ text: "hello", sourceLang: provider.language ?? "en" });
+        setTestMessage(entry ? `${provider.name} 查词测试成功：${entry.headword}` : `${provider.name} 未返回 hello 词条。`);
+      } catch (caught) {
+        setTestMessage(`查词测试失败：${(caught as Error).message}`);
+      }
+      return;
+    }
+
     if (provider.type === "mock") {
       setTestMessage("Mock Provider 可用。");
       return;
@@ -135,7 +159,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
     <section className="page">
       <PageHeader
         eyebrow="Settings"
-        title="设置"
+        title="我的与设置"
         actions={
           <button className="button danger" type="button" onClick={() => setStore(resetStore())}>
             重置本地数据
@@ -145,7 +169,10 @@ export function SettingsPage({ store, setStore }: PageProps) {
 
       <div className="grid-two">
         <div className="panel pad stack">
-          <div className="panel-title">偏好</div>
+          <div>
+            <div className="panel-title">偏好</div>
+            <div className="muted small">查词优先，翻译作为辅助能力。</div>
+          </div>
           <div className="grid-two">
             <div className="field">
               <label htmlFor="theme">主题</label>
@@ -197,12 +224,15 @@ export function SettingsPage({ store, setStore }: PageProps) {
               onChange={(event) => updateSetting("localDictionaryFolder", event.target.value)}
             />
           </div>
-          <div className="notice">API key 当前仅写入本地应用数据。加密存储会在 SQLite/Tauri 存储层接入时完成。</div>
+          <div className="notice">API key 当前仅写入本地应用数据。不要把自己的 key 提交到公开仓库。</div>
         </div>
 
         <form className="panel pad stack" onSubmit={saveProvider}>
           <div className="item-head">
-            <div className="panel-title">{providerForm.id ? "编辑 Provider" : "新增 Provider"}</div>
+            <div>
+              <div className="panel-title">{providerForm.id ? "编辑 Provider" : "新增 Provider"}</div>
+              <div className="muted small">Oxford / Merriam-Webster 使用官方 API；Free Dictionary 无需 key。</div>
+            </div>
             {providerForm.id ? (
               <button className="button" type="button" onClick={() => setProviderForm(emptyProviderForm)}>
                 <Plus size={16} aria-hidden="true" />
@@ -228,12 +258,11 @@ export function SettingsPage({ store, setStore }: PageProps) {
                 value={providerForm.type}
                 onChange={(event) => setProviderForm({ ...providerForm, type: event.target.value as ProviderType })}
               >
-                <option value="openai">openai</option>
-                <option value="deepl">deepl</option>
-                <option value="google">google</option>
-                <option value="oxford">oxford</option>
-                <option value="custom">custom</option>
-                <option value="mock">mock</option>
+                {providerTypes.map((type) => (
+                  <option value={type} key={type}>
+                    {type}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -244,12 +273,22 @@ export function SettingsPage({ store, setStore }: PageProps) {
               className="input"
               value={providerForm.baseUrl}
               onChange={(event) => setProviderForm({ ...providerForm, baseUrl: event.target.value })}
-              placeholder="https://api.example.invalid/v1"
+              placeholder="https://api.dictionaryapi.dev/api/v2/entries"
             />
           </div>
-          <div className="grid-two">
+          <div className="grid-three">
             <div className="field">
-              <label htmlFor="provider-key">API key</label>
+              <label htmlFor="provider-app-id">App ID</label>
+              <input
+                id="provider-app-id"
+                className="input"
+                value={providerForm.appId}
+                onChange={(event) => setProviderForm({ ...providerForm, appId: event.target.value })}
+                placeholder="Oxford app_id"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="provider-key">API key / app_key</label>
               <input
                 id="provider-key"
                 className="input"
@@ -260,6 +299,18 @@ export function SettingsPage({ store, setStore }: PageProps) {
               />
             </div>
             <div className="field">
+              <label htmlFor="provider-language">语言</label>
+              <input
+                id="provider-language"
+                className="input"
+                value={providerForm.language}
+                onChange={(event) => setProviderForm({ ...providerForm, language: event.target.value })}
+                placeholder="en / en-gb / en-us"
+              />
+            </div>
+          </div>
+          <div className="grid-three">
+            <div className="field">
               <label htmlFor="provider-model">Model</label>
               <input
                 id="provider-model"
@@ -268,8 +319,6 @@ export function SettingsPage({ store, setStore }: PageProps) {
                 onChange={(event) => setProviderForm({ ...providerForm, model: event.target.value })}
               />
             </div>
-          </div>
-          <div className="grid-three">
             <div className="field">
               <label htmlFor="provider-priority">优先级</label>
               <input
@@ -278,15 +327,6 @@ export function SettingsPage({ store, setStore }: PageProps) {
                 type="number"
                 value={providerForm.priority}
                 onChange={(event) => setProviderForm({ ...providerForm, priority: Number(event.target.value) })}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="provider-target">默认目标</label>
-              <input
-                id="provider-target"
-                className="input"
-                value={providerForm.defaultTargetLang}
-                onChange={(event) => setProviderForm({ ...providerForm, defaultTargetLang: event.target.value })}
               />
             </div>
             <div className="field">
@@ -301,6 +341,15 @@ export function SettingsPage({ store, setStore }: PageProps) {
                 <option value="false">disabled</option>
               </select>
             </div>
+          </div>
+          <div className="field">
+            <label htmlFor="provider-target">默认翻译目标语言</label>
+            <input
+              id="provider-target"
+              className="input"
+              value={providerForm.defaultTargetLang}
+              onChange={(event) => setProviderForm({ ...providerForm, defaultTargetLang: event.target.value })}
+            />
           </div>
           <div className="stack" style={{ gap: 6 }}>
             <div className="label">用途</div>
@@ -331,10 +380,17 @@ export function SettingsPage({ store, setStore }: PageProps) {
 
       <div className="panel" style={{ marginTop: 16 }}>
         <div className="panel-header">
-          <div className="panel-title">Providers</div>
+          <div>
+            <div className="panel-title">Providers</div>
+            <div className="muted small">推荐顺序：本地词典 → Free Dictionary → Oxford/Merriam-Webster → Mock。</div>
+          </div>
           <span className="chip">{store.apiProviders.length}</span>
         </div>
-        {testMessage ? <div className="pad"><div className="notice">{testMessage}</div></div> : null}
+        {testMessage ? (
+          <div className="pad">
+            <div className="notice">{testMessage}</div>
+          </div>
+        ) : null}
         {sortedProviders.length ? (
           <div className="list">
             {sortedProviders.map((provider) => (
@@ -344,6 +400,8 @@ export function SettingsPage({ store, setStore }: PageProps) {
                     <div className="item-title">{provider.name}</div>
                     <div className="muted small">
                       {provider.type} · P{provider.priority} · {provider.useFor.join(", ")}
+                      {provider.language ? ` · ${provider.language}` : ""}
+                      {provider.appId ? " · app_id saved" : ""}
                       {provider.apiKeyEncrypted ? " · key saved" : ""}
                     </div>
                   </button>
