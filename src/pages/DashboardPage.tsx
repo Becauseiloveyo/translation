@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, Clock3, DatabaseZap, Languages, Sparkles, Star, type LucideIcon } from "lucide-react";
+import { ArrowRight, BookOpen, Clock3, DatabaseZap, Languages, Search, Settings, Star, type LucideIcon } from "lucide-react";
 import { PageKey } from "../components/AppShell";
 import { PageProps } from "../types/app";
 
@@ -7,11 +7,12 @@ type DashboardPageProps = PageProps & {
 };
 
 export function DashboardPage({ store, onNavigate }: DashboardPageProps) {
+  const enabledDictionaries = store.userDictionaries.filter((dictionary) => dictionary.enabled).length;
   const overview = [
     { label: "词汇本", value: store.vocabulary.length, suffix: "词", icon: Star },
-    { label: "术语表", value: store.glossary.length, suffix: "条", icon: Sparkles },
     { label: "历史记录", value: store.history.length, suffix: "条", icon: Clock3 },
-    { label: "词典来源", value: store.userDictionaries.length, suffix: "本", icon: DatabaseZap }
+    { label: "已启用词典", value: enabledDictionaries, suffix: "本", icon: DatabaseZap },
+    { label: "词条总数", value: store.dictionaryEntries.length, suffix: "条", icon: BookOpen }
   ];
 
   return (
@@ -20,46 +21,46 @@ export function DashboardPage({ store, onNavigate }: DashboardPageProps) {
 
       <section className="dashboard-hero launch-hero">
         <div className="hero-copy">
-          <span className="eyebrow">LiteDict workspace</span>
-          <h1>今天想翻译什么？</h1>
-          <p>本地优先的个人翻译词典，支持查词、术语表、词汇本和自定义 Provider。打开后先翻译，沉淀内容再复习。</p>
+          <span className="eyebrow">Lookup first</span>
+          <h1>先查单词，再翻译句子</h1>
+          <p>LiteDict 的核心是快速查词：输入一个单词先给释义、音标、例句；遇到短语或长句，再切到翻译处理。</p>
         </div>
         <div className="hero-actions">
-          <button className="button primary big" type="button" onClick={() => onNavigate("translate")}>
-            <Languages size={18} aria-hidden="true" />
-            开始翻译
+          <button className="button primary big" type="button" onClick={() => onNavigate("dictionary")}>
+            <Search size={18} aria-hidden="true" />
+            查一个单词
           </button>
-          <button className="button big" type="button" onClick={() => onNavigate("sources")}>
-            <DatabaseZap size={18} aria-hidden="true" />
-            导入词典
+          <button className="button big" type="button" onClick={() => onNavigate("translate")}>
+            <Languages size={18} aria-hidden="true" />
+            翻译句子
           </button>
         </div>
       </section>
 
-      <section className="quick-launch-grid" aria-label="快速入口">
+      <section className="quick-launch-grid" aria-label="核心入口">
         <LaunchCard
-          title="翻译一句话"
-          description="进入双栏工作台，自动判断查词或翻译。"
-          icon={Languages}
-          onClick={() => onNavigate("translate")}
-        />
-        <LaunchCard
-          title="查一个单词"
-          description="从本地词典和已导入词库里查释义。"
+          title="查词"
+          description="单词释义、音标、例句，本地词典优先。"
           icon={BookOpen}
           onClick={() => onNavigate("dictionary")}
         />
         <LaunchCard
-          title="复习词汇本"
-          description={`${store.vocabulary.length} 个词条，可继续积累和整理。`}
+          title="翻译"
+          description="短语和句子翻译，保留术语匹配能力。"
+          icon={Languages}
+          onClick={() => onNavigate("translate")}
+        />
+        <LaunchCard
+          title="词汇本"
+          description="把查到的单词收起来，后面再复习。"
           icon={Star}
           onClick={() => onNavigate("vocabulary")}
         />
         <LaunchCard
-          title="管理术语表"
-          description="让专有名词和固定表达保持一致。"
-          icon={Sparkles}
-          onClick={() => onNavigate("glossary")}
+          title="词典设置"
+          description="导入本地词典、管理来源和 Provider。"
+          icon={Settings}
+          onClick={() => onNavigate("sources")}
         />
       </section>
 
@@ -67,10 +68,10 @@ export function DashboardPage({ store, onNavigate }: DashboardPageProps) {
         <div className="item-head">
           <div>
             <div className="panel-title">轻量概览</div>
-            <div className="muted small">这些数据只是辅助入口，不是主要工作区。</div>
+            <div className="muted small">只保留和查词、翻译直接相关的数据。</div>
           </div>
           <button className="button" type="button" onClick={() => onNavigate("history")}>
-            最近历史
+            最近记录
             <ArrowRight size={16} aria-hidden="true" />
           </button>
         </div>
