@@ -12,7 +12,7 @@ import { AppStore } from "./types/models";
 import { loadStore, saveStore } from "./services/storage/localStore";
 
 export function App() {
-  const [page, setPage] = useState<PageKey>("translate");
+  const [page, setPage] = useState<PageKey>("dictionary");
   const [store, setStore] = useState<AppStore>(() => loadStore());
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function App() {
       case "translate":
         return <TranslatePage {...shared} />;
       case "dictionary":
-        return <DictionaryPage {...shared} />;
+        return <DictionaryPage {...shared} onNavigate={setPage} />;
       case "vocabulary":
         return <VocabularyPage {...shared} />;
       case "glossary":
@@ -46,7 +46,7 @@ export function App() {
       case "settings":
         return <SettingsPage {...shared} />;
       default:
-        return <TranslatePage {...shared} />;
+        return <DictionaryPage {...shared} onNavigate={setPage} />;
     }
   }, [page, store]);
 
