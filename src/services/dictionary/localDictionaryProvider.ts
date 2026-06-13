@@ -1,6 +1,7 @@
-import { AppStore, DictionaryEntry } from "../../types/models";
+import { ApiProvider, AppStore, DictionaryEntry } from "../../types/models";
 import { normalizeHeadword } from "../../utils/text";
 import { MockDictionaryProvider } from "./mockDictionaryProvider";
+import { canUseRemoteDictionaryProvider, createDictionaryProvider, enabledDictionaryProviders } from "./remoteDictionaryProviders";
 
 export async function lookupDictionary(store: AppStore, text: string): Promise<DictionaryEntry | null> {
   const normalized = normalizeHeadword(text);
@@ -8,21 +9,50 @@ export async function lookupDictionary(store: AppStore, text: string): Promise<D
     return null;
   }
 
-  const enabledDictionaryIds = new Set(
-    store.userDictionaries.filter((dictionary) => dictionary.enabled).map((dictionary) => dictionary.id)
-  );
-
-  const local = store.dictionaryEntries.find((entry) => {
-    if (entry.normalizedHeadword !== normalized) {
-      return false;
-    }
-    return !entry.dictionaryId || enabledDictionaryIds.has(entry.dictionaryId);
-  });
-
+  const local = lookupLocalDictionary(store, normalized);
   if (local) {
     return local;
+  }
+
+  const remote = await lookupRemoteDictionaries(store, text);
+  if (remote) {
+    return remote;
   }
 
   return new MockDictionaryProvider().lookup({ text });
 }
 
+function lookupLocalDictionary(store: AppStore, normalized: string): DictionaryEntry | undefined {
+  const enabledDictionaryIds = new Set(
+    store.userDictionaries.filter((dictionary) => dictionary.enabled).map((dictionary) => dictionary.id)
+  );
+
+  return store.dictionaryEntries.find((entry) => {
+    if (entry.normalizedHeadword !== normalized) {
+      return false;
+    }
+    return !entry.dictionaryId || enabledDictionaryIds.has(entry.dictionaryId);
+  });
+}
+
+async function lookupRemoteDictionaries(store: AppStore, text: string): Promise<DictionaryEntry | null> {
+  const remoteProviders = enabledDictionaryProviders(store.apiProviders).filter(shouldTryProvider);
+
+  for (const providerConfig of remoteProviders) {
+    try {
+      const provider = createDictionaryProvider(providerConfig);
+      const entry = await provider.lookup({ text, sourceLang: providerConfig.language ?? "en" });
+      if (entry) {
+        return entry;
+      }
+    } catch {
+      // Keep lookup resilient: a broken online provider must not block local dictionaries or mock fallback.
+    }
+  }
+
+  return null;
+}
+
+function shouldTryProvider(provider: ApiProvider): boolean {
+  return provider.type !== "mock" && canUseRemoteDictionaryProvider(provider);
+}
