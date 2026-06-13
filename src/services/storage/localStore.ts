@@ -26,6 +26,42 @@ export function createInitialStore(): AppStore {
     },
     apiProviders: [
       {
+        id: "provider_free_dictionary",
+        name: "Free Dictionary API",
+        type: "free_dictionary",
+        baseUrl: "https://api.dictionaryapi.dev/api/v2/entries",
+        language: "en",
+        enabled: true,
+        priority: 20,
+        useFor: ["dictionary"],
+        createdAt,
+        updatedAt: createdAt
+      },
+      {
+        id: "provider_oxford",
+        name: "Oxford Dictionaries API",
+        type: "oxford",
+        baseUrl: "https://od-api.oxforddictionaries.com/api/v2",
+        language: "en-gb",
+        enabled: false,
+        priority: 30,
+        useFor: ["dictionary"],
+        createdAt,
+        updatedAt: createdAt
+      },
+      {
+        id: "provider_merriam_webster",
+        name: "Merriam-Webster Collegiate",
+        type: "merriam_webster",
+        baseUrl: "https://www.dictionaryapi.com/api/v3/references/collegiate/json",
+        language: "en",
+        enabled: false,
+        priority: 40,
+        useFor: ["dictionary"],
+        createdAt,
+        updatedAt: createdAt
+      },
+      {
         id: "provider_mock",
         name: "Mock Provider",
         type: "mock",
@@ -68,16 +104,6 @@ export function createInitialStore(): AppStore {
         useFor: ["translate", "ocr"],
         createdAt,
         updatedAt: createdAt
-      },
-      {
-        id: "provider_oxford_placeholder",
-        name: "Oxford Dictionaries Placeholder",
-        type: "oxford",
-        enabled: false,
-        priority: 50,
-        useFor: ["dictionary"],
-        createdAt,
-        updatedAt: createdAt
       }
     ],
     vocabulary: [],
@@ -116,7 +142,7 @@ export function loadStore(): AppStore {
       ...fallback,
       ...parsed,
       settings: { ...fallback.settings, ...parsed.settings },
-      apiProviders: parsed.apiProviders ?? fallback.apiProviders,
+      apiProviders: mergeDefaultProviders(parsed.apiProviders, fallback.apiProviders),
       vocabulary: parsed.vocabulary ?? [],
       glossary: parsed.glossary ?? fallback.glossary,
       history: parsed.history ?? [],
@@ -202,3 +228,12 @@ export function resetStore(): AppStore {
   return next;
 }
 
+function mergeDefaultProviders(savedProviders: ApiProvider[] | undefined, defaultProviders: ApiProvider[]): ApiProvider[] {
+  if (!savedProviders?.length) {
+    return defaultProviders;
+  }
+
+  const savedIds = new Set(savedProviders.map((provider) => provider.id));
+  const missingDefaults = defaultProviders.filter((provider) => !savedIds.has(provider.id));
+  return [...savedProviders, ...missingDefaults];
+}
