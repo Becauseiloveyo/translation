@@ -1,5 +1,6 @@
 import { CheckCircle2, Download, Plus, RotateCcw, Save, Search, Trash2, Upload } from "lucide-react";
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { AppSelect } from "../components/AppSelect";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/PageHeader";
 import { upsertVocabulary } from "../services/storage/localStore";
@@ -28,6 +29,12 @@ const statusLabels: Record<VocabularyStatus, string> = {
   learning: "学习中",
   mastered: "已掌握"
 };
+
+const statusOptions = [
+  { value: "new", label: "新词" },
+  { value: "learning", label: "学习中" },
+  { value: "mastered", label: "已掌握" }
+];
 
 type FilterValue = "all" | VocabularyStatus;
 
@@ -215,19 +222,12 @@ export function VocabularyPage({ store, setStore }: PageProps) {
               <label htmlFor="vocab-word">单词 / 短语</label>
               <input id="vocab-word" className="input" value={form.word} onChange={(event) => setForm({ ...form, word: event.target.value })} />
             </div>
-            <div className="field">
-              <label htmlFor="vocab-status">状态</label>
-              <select
-                id="vocab-status"
-                className="select"
-                value={form.status}
-                onChange={(event) => setForm({ ...form, status: event.target.value as VocabularyStatus })}
-              >
-                <option value="new">新词</option>
-                <option value="learning">学习中</option>
-                <option value="mastered">已掌握</option>
-              </select>
-            </div>
+            <AppSelect
+              label="状态"
+              value={form.status}
+              options={statusOptions}
+              onChange={(value) => setForm({ ...form, status: value as VocabularyStatus })}
+            />
           </div>
           <div className="field">
             <label htmlFor="vocab-translation">释义</label>
