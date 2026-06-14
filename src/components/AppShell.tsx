@@ -21,6 +21,10 @@ type NavItem = {
   group: "home" | "core" | "study" | "advanced" | "system";
 };
 
+type ViewTransitionDocument = Document & {
+  startViewTransition?: (callback: () => void) => { finished: Promise<void> };
+};
+
 const navItems: NavItem[] = [
   { id: "home", label: "首页", icon: Home, group: "home" },
   { id: "dictionary", label: "查词", icon: BookOpen, group: "core" },
@@ -43,10 +47,22 @@ type AppShellProps = {
 export function AppShell({ currentPage, onPageChange, children }: AppShellProps) {
   const title = navItems.find((item) => item.id === currentPage)?.label ?? "LiteDict";
 
+  function navigate(page: PageKey) {
+    if (page === currentPage) {
+      return;
+    }
+    const transitionDocument = document as ViewTransitionDocument;
+    if (transitionDocument.startViewTransition) {
+      transitionDocument.startViewTransition(() => onPageChange(page));
+      return;
+    }
+    onPageChange(page);
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="桌面导航">
-        <button className="brand" type="button" onClick={() => onPageChange("home")}>
+        <button className="brand" type="button" onClick={() => navigate("home")}>
           <div className="brand-mark">
             <Library size={20} aria-hidden="true" />
           </div>
@@ -56,10 +72,10 @@ export function AppShell({ currentPage, onPageChange, children }: AppShellProps)
           </div>
         </button>
 
-        <NavGroup title="核心功能" items={navItems.filter((item) => item.group === "core")} currentPage={currentPage} onPageChange={onPageChange} />
-        <NavGroup title="学习" items={navItems.filter((item) => item.group === "study")} currentPage={currentPage} onPageChange={onPageChange} />
-        <NavGroup title="更多" items={navItems.filter((item) => item.group === "advanced")} currentPage={currentPage} onPageChange={onPageChange} />
-        <NavGroup title="偏好" items={navItems.filter((item) => item.group === "system")} currentPage={currentPage} onPageChange={onPageChange} />
+        <NavGroup title="核心功能" items={navItems.filter((item) => item.group === "core")} currentPage={currentPage} onPageChange={navigate} />
+        <NavGroup title="学习" items={navItems.filter((item) => item.group === "study")} currentPage={currentPage} onPageChange={navigate} />
+        <NavGroup title="更多" items={navItems.filter((item) => item.group === "advanced")} currentPage={currentPage} onPageChange={navigate} />
+        <NavGroup title="偏好" items={navItems.filter((item) => item.group === "system")} currentPage={currentPage} onPageChange={navigate} />
       </aside>
 
       <div className="mobile-topbar">
@@ -80,7 +96,7 @@ export function AppShell({ currentPage, onPageChange, children }: AppShellProps)
               className={active ? "bottom-nav-item active" : "bottom-nav-item"}
               key={item.id}
               type="button"
-              onClick={() => onPageChange(item.id)}
+              onClick={() => navigate(item.id)}
               aria-current={active ? "page" : undefined}
             >
               <Icon size={21} aria-hidden="true" />
