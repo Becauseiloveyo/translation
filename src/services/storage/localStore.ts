@@ -39,6 +39,18 @@ export function createInitialStore(): AppStore {
         updatedAt: createdAt
       },
       {
+        id: "provider_libretranslate",
+        name: "LibreTranslate",
+        type: "libretranslate",
+        baseUrl: "https://libretranslate.com/translate",
+        enabled: false,
+        priority: 15,
+        useFor: ["translate"],
+        defaultTargetLang: "zh",
+        createdAt,
+        updatedAt: createdAt
+      },
+      {
         id: "provider_free_dictionary",
         name: "Free Dictionary API",
         type: "free_dictionary",
