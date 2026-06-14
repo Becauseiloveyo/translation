@@ -293,6 +293,50 @@ button:active,
   box-shadow: none !important;
 }
 
+/* Vocabulary: make it feel like a review flow, not a form app. */
+.vocabulary-page .metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.vocabulary-page .study-card {
+  min-height: 230px;
+  border-radius: 32px !important;
+  background:
+    radial-gradient(circle at 100% 0, rgba(139, 92, 246, 0.14), transparent 180px),
+    rgba(255, 255, 255, 0.82) !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.vocabulary-page .study-card .word-title {
+  font-size: 38px !important;
+}
+
+.vocabulary-page .study-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.vocabulary-page .vocabulary-grid form.panel {
+  background: rgba(255, 255, 255, 0.58) !important;
+}
+
+.vocabulary-page .vocabulary-list-panel {
+  margin-top: 14px;
+}
+
+.vocabulary-page .list-item {
+  border-radius: 22px !important;
+}
+
+.settings-page .provider-wizard,
+.settings-page .advanced-provider-list {
+  background: rgba(255, 255, 255, 0.58) !important;
+}
+
 /* Remove remaining explanatory clutter on mobile. */
 @media (max-width: 980px) {
   .mobile-topbar {
@@ -358,6 +402,47 @@ button:active,
 
   .translate-page .source-actions .button.primary {
     width: 100%;
+  }
+
+  .vocabulary-page .page-header {
+    margin-bottom: 10px !important;
+  }
+
+  .vocabulary-page .metric-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .vocabulary-page .mini-stat {
+    min-height: 72px !important;
+    padding: 12px !important;
+    border-radius: 20px !important;
+  }
+
+  .vocabulary-page .mini-stat span {
+    font-size: 11px !important;
+  }
+
+  .vocabulary-page .mini-stat strong {
+    font-size: 24px !important;
+  }
+
+  .vocabulary-page .vocabulary-grid {
+    display: flex !important;
+    flex-direction: column;
+  }
+
+  .vocabulary-page .vocabulary-grid form.panel {
+    order: 3;
+  }
+
+  .vocabulary-page .study-card {
+    min-height: 210px;
+  }
+
+  .settings-page .provider-wizard,
+  .settings-page .advanced-provider-list {
+    opacity: 0.92;
   }
 }
 
