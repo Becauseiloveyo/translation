@@ -58,14 +58,42 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Build web app and sync Capacitor
-        run: npm run android:sync
+        id: web-sync
+        run: |
+          set +e
+          npm run android:sync 2>&1 | tee web-sync.log
+          status=${PIPESTATUS[0]}
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" -ne 0 ]; then
+            {
+              echo "## Web build / Capacitor sync failed"
+              echo '```text'
+              tail -n 160 web-sync.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit "$status"
+          fi
 
       - name: Make Gradle wrapper executable
         run: chmod +x android/gradlew
 
       - name: Build debug APK
+        id: gradle-build
         working-directory: android
-        run: ./gradlew assembleDebug --stacktrace
+        run: |
+          set +e
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee ../gradle-build.log
+          status=${PIPESTATUS[0]}
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" -ne 0 ]; then
+            {
+              echo "## Gradle build failed"
+              echo '```text'
+              tail -n 200 ../gradle-build.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit "$status"
+          fi
 
       - name: Rename APK
         run: |
@@ -78,3 +106,13 @@ jobs:
           name: LiteDict-debug-apk
           path: artifacts/LiteDict-debug.apk
           if-no-files-found: error
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiteDict-build-logs
+          path: |
+            web-sync.log
+            gradle-build.log
+          if-no-files-found: ignore
