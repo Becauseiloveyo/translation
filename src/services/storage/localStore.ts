@@ -19,6 +19,7 @@ export function createInitialStore(): AppStore {
   return {
     settings: {
       theme: "system",
+      fontMode: "default",
       defaultSourceLang: "auto",
       defaultTargetLang: "auto",
       autoSaveHistory: true,
