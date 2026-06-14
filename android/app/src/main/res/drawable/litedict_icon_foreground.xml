@@ -5,24 +5,38 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
+    <!-- Quiet back sheet: gives the icon the layered translation-card feel without clutter. -->
     <path
-        android:fillColor="#38BDF8"
-        android:pathData="M28,26C20.3,26 14,32.3 14,40v2c0,7.7 6.3,14 14,14h18v-9H28c-2.8,0 -5,-2.2 -5,-5v-2c0,-2.8 2.2,-5 5,-5h22c2.8,0 5,2.2 5,5v2h9v-2c0,-7.7 -6.3,-14 -14,-14H28z" />
+        android:fillColor="#BFDBFE"
+        android:fillAlpha="0.46"
+        android:pathData="M30,32C30,27.6 33.6,24 38,24h30c4.4,0 8,3.6 8,8v36c0,4.4 -3.6,8 -8,8H38c-4.4,0 -8,-3.6 -8,-8V32z" />
 
-    <path
-        android:fillColor="#60A5FA"
-        android:pathData="M62,52v9h18c2.8,0 5,2.2 5,5v2c0,2.8 -2.2,5 -5,5H58c-2.8,0 -5,-2.2 -5,-5v-2h-9v2c0,7.7 6.3,14 14,14h22c7.7,0 14,-6.3 14,-14v-2c0,-7.7 -6.3,-14 -14,-14H62z" />
-
+    <!-- Main dictionary card. -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M34,47h40c2.5,0 4.5,2 4.5,4.5S76.5,56 74,56H34c-2.5,0 -4.5,-2 -4.5,-4.5S31.5,47 34,47z" />
+        android:pathData="M36,26C36,21.6 39.6,18 44,18h28c4.4,0 8,3.6 8,8v48c0,4.4 -3.6,8 -8,8H44c-4.4,0 -8,-3.6 -8,-8V26z" />
+
+    <!-- Soft folded corner / accent. -->
+    <path
+        android:fillColor="#67E8F9"
+        android:pathData="M64,18h8c4.4,0 8,3.6 8,8v8H70c-3.3,0 -6,-2.7 -6,-6V18z" />
+
+    <!-- Minimal A mark: enough to signal language, less noisy than the old chain/plus icon. -->
+    <path
+        android:fillColor="#1D4ED8"
+        android:pathData="M46,63l8.2,-25h7.6L70,63h-6.9l-1.5,-5.2h-7.3L52.8,63H46zM55.8,52.7h4.3l-2.1,-7.6L55.8,52.7z" />
+
+    <!-- Dictionary text lines. -->
+    <path
+        android:fillColor="#93C5FD"
+        android:pathData="M48,68h20c1.4,0 2.5,1.1 2.5,2.5S69.4,73 68,73H48c-1.4,0 -2.5,-1.1 -2.5,-2.5S46.6,68 48,68z" />
 
     <path
-        android:fillColor="#FFFFFF"
-        android:fillAlpha="0.96"
-        android:pathData="M35,68l8,-24h7l8,24h-6l-1.5,-5h-8.2L41,68h-6zM43.8,58h5.4l-2.7,-8.8L43.8,58z" />
+        android:fillColor="#DBEAFE"
+        android:pathData="M51,76h14c1.2,0 2.2,1 2.2,2.2s-1,2.2 -2.2,2.2H51c-1.2,0 -2.2,-1 -2.2,-2.2s1,-2.2 2.2,-2.2z" />
 
+    <!-- Small translation dot accent. -->
     <path
-        android:fillColor="#A7F3D0"
-        android:pathData="M62,66h5v-9h9v-5h-9v-9h-5v9h-9v5h9z" />
+        android:fillColor="#14B8A6"
+        android:pathData="M77,76m-5,0a5,5 0,1 0,10 0a5,5 0,1 0,-10 0" />
 </vector>
