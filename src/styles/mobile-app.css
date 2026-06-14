@@ -1,8 +1,11 @@
 /* Final mobile-app layer: real app scrolling, custom menus, softer transitions. */
 :root {
   --app-font: Arial, "Helvetica Neue", "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
-  --nav-height: 90px;
-  --topbar-height: 72px;
+  --nav-height: 82px;
+  --topbar-height: 68px;
+  --accent-2: #11a88a;
+  --accent-3: #7c5cff;
+  --warm: #ff9f43;
 }
 
 html,
@@ -12,7 +15,6 @@ body,
   height: 100%;
   min-height: 100%;
   overflow: hidden;
-  touch-action: manipulation;
 }
 
 body,
@@ -39,12 +41,14 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
+  touch-action: pan-y;
 }
 
 .page {
   min-height: auto;
   will-change: opacity, transform;
+  animation-duration: 160ms !important;
 }
 
 .app-hero,
@@ -65,6 +69,19 @@ body {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 10px 26px rgba(42, 93, 156, 0.12);
+}
+
+.mobile-settings-button {
+  margin-left: auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--muted-strong);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 8px 18px rgba(42, 93, 156, 0.08);
 }
 
 .app-select {
@@ -101,7 +118,7 @@ body {
 .app-select-trigger svg {
   flex: 0 0 auto;
   color: var(--muted);
-  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
+  transition: transform 140ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .app-select.open .app-select-trigger {
@@ -123,13 +140,14 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  touch-action: pan-y;
   padding: 8px;
   border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(18px);
   box-shadow: 0 22px 56px rgba(42, 93, 156, 0.22);
-  animation: app-menu-in 160ms cubic-bezier(0.2, 0, 0, 1) both;
+  animation: app-menu-in 120ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 
 @keyframes app-menu-in {
@@ -277,16 +295,20 @@ body {
     top: auto !important;
     flex: 0 0 auto;
     min-height: calc(var(--topbar-height) + var(--safe-top)) !important;
-    padding: calc(12px + var(--safe-top)) 22px 12px !important;
+    padding: calc(10px + var(--safe-top)) 20px 10px !important;
+    align-items: flex-end !important;
+    gap: 14px;
   }
 
   .main-content {
     flex: 1 1 auto;
     height: auto;
     min-height: 0;
-    padding: 14px 14px calc(var(--nav-height) + 26px + var(--safe-bottom)) !important;
+    padding: 14px 14px calc(var(--nav-height) + 24px + var(--safe-bottom)) !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
   }
 
   .page {
@@ -294,30 +316,34 @@ body {
   }
 
   .bottom-nav {
-    left: 12px !important;
-    right: 12px !important;
+    left: 18px !important;
+    right: 18px !important;
     bottom: max(10px, var(--safe-bottom)) !important;
-    min-height: 76px !important;
-    border-radius: 30px !important;
-    background: rgba(255, 255, 255, 0.92) !important;
-    box-shadow: 0 18px 48px rgba(42, 93, 156, 0.2) !important;
+    min-height: 72px !important;
+    padding: 7px !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    border-radius: 28px !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    box-shadow: 0 14px 38px rgba(42, 93, 156, 0.18) !important;
+    touch-action: manipulation;
   }
 
   .bottom-nav-item {
     overflow: hidden;
     isolation: isolate;
+    min-height: 56px !important;
   }
 
   .bottom-nav-item::before {
     content: "";
     position: absolute;
-    inset: 6px 5px;
+    inset: 6px 7px;
     z-index: -1;
-    border-radius: 22px;
+    border-radius: 20px;
     background: var(--accent-soft);
     opacity: 0;
-    transform: scale(0.78);
-    transition: opacity 180ms cubic-bezier(0.2, 0, 0, 1), transform 220ms cubic-bezier(0.2, 0, 0, 1);
+    transform: scale(0.88);
+    transition: opacity 120ms cubic-bezier(0.2, 0, 0, 1), transform 140ms cubic-bezier(0.2, 0, 0, 1);
   }
 
   .bottom-nav-item.active::before {
@@ -330,7 +356,7 @@ body {
   }
 
   .bottom-nav-item span {
-    transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), color 160ms cubic-bezier(0.2, 0, 0, 1);
+    transition: transform 120ms cubic-bezier(0.2, 0, 0, 1), color 120ms cubic-bezier(0.2, 0, 0, 1);
   }
 
   .bottom-nav-item.active span {
@@ -344,6 +370,30 @@ body {
 
   .app-select-menu {
     max-height: min(340px, 46vh);
+  }
+
+  .launch-card:nth-child(1),
+  .content-button:nth-child(1),
+  .mini-stat:nth-child(1) {
+    background: linear-gradient(135deg, #ffffff, #eef6ff);
+  }
+
+  .launch-card:nth-child(2),
+  .content-button:nth-child(2),
+  .mini-stat:nth-child(2) {
+    background: linear-gradient(135deg, #ffffff, #effaf7);
+  }
+
+  .launch-card:nth-child(3),
+  .content-button:nth-child(3),
+  .mini-stat:nth-child(3) {
+    background: linear-gradient(135deg, #ffffff, #f4f1ff);
+  }
+
+  .launch-card:nth-child(4),
+  .content-button:nth-child(4),
+  .mini-stat:nth-child(4) {
+    background: linear-gradient(135deg, #ffffff, #fff7ea);
   }
 }
 
