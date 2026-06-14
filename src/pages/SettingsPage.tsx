@@ -116,7 +116,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
 
   async function testProvider(provider: ApiProvider) {
     setTestMessage("");
-    if (provider.useFor.includes("dictionary") && ["free_dictionary", "oxford", "merriam_webster"].includes(provider.type)) {
+    if (provider.useFor.includes("dictionary") && isDictionaryApiProviderType(provider.type)) {
       if (!canUseRemoteDictionaryProvider(provider)) {
         setTestMessage(`${provider.name} 缺少必填凭据。Oxford 需要 app_id + app_key；Merriam-Webster 需要 API key。`);
         return;
@@ -433,4 +433,8 @@ export function SettingsPage({ store, setStore }: PageProps) {
       </div>
     </section>
   );
+}
+
+function isDictionaryApiProviderType(type: ProviderType): boolean {
+  return type === "free_dictionary" || type === "oxford" || type === "merriam_webster";
 }
