@@ -94,6 +94,11 @@ jobs:
             echo "- versionName: $VERSION_NAME"
             echo "- versionCode: $VERSION_CODE"
             echo "- tag: $RELEASE_TAG"
+            if [ "${{ github.event_name }}" = "push" ]; then
+              echo "- release mode: automatic on main push"
+            else
+              echo "- release mode: manual workflow_dispatch"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Node.js
@@ -213,7 +218,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish GitHub Release
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.create_github_release }}
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.create_github_release) }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release-meta.outputs.release_tag }}
