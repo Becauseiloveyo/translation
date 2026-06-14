@@ -33,7 +33,7 @@ export function TranslatePage({ store, setStore }: PageProps) {
   const [text, setText] = useState("");
   const [sourceLang, setSourceLang] = useState(store.settings.defaultSourceLang);
   const [targetLang, setTargetLang] = useState(store.settings.defaultTargetLang);
-  const [providerId, setProviderId] = useState("provider_mock");
+  const [providerId, setProviderId] = useState("provider_mymemory_free");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [translation, setTranslation] = useState<TranslateState | null>(null);
@@ -41,7 +41,7 @@ export function TranslatePage({ store, setStore }: PageProps) {
   const detection = useMemo(() => detectInput(text, sourceLang, targetLang), [sourceLang, targetLang, text]);
 
   const providerOptions = store.apiProviders
-    .filter((provider) => provider.enabled && provider.useFor.includes("translate"))
+    .filter((provider) => provider.enabled && provider.useFor.includes("translate") && provider.type !== "mock")
     .map((provider) => ({ value: provider.id, label: provider.name, description: provider.type }));
   const resultText = translation?.translatedText ?? dictionaryEntry?.definitions[0]?.definitionZh ?? dictionaryEntry?.definitions[0]?.definitionEn ?? "";
   const resultTitle = dictionaryEntry ? "词典释义" : "译文";
@@ -101,7 +101,7 @@ export function TranslatePage({ store, setStore }: PageProps) {
         }
       }
     } catch (caught) {
-      setError((caught as Error).message);
+      setError(toFriendlyError(caught));
     } finally {
       setIsLoading(false);
     }
@@ -141,6 +141,9 @@ export function TranslatePage({ store, setStore }: PageProps) {
         word: dictionaryEntry?.headword ?? text.trim(),
         translation: resultText,
         status: "new",
+        reviewCount: 0,
+        masteredCount: 0,
+        nextReviewAt: now,
         note: translation ? `来自 ${translation.provider}` : dictionaryEntry?.source ? `来自 ${dictionaryEntry.source}` : undefined,
         createdAt: now,
         updatedAt: now
@@ -149,25 +152,9 @@ export function TranslatePage({ store, setStore }: PageProps) {
   }
 
   return (
-    <section className="page translate-page">
-      <header className="translate-titlebar app-hero compact-hero">
-        <div>
-          <div className="eyebrow">Translate</div>
-          <h1>翻译与查词</h1>
-          <p>输入单词优先查词；输入短语和句子时进入翻译流程，保留术语匹配和词汇本保存。</p>
-        </div>
-        <div className="page-actions floating-actions">
-          <button className="button icon" type="button" onClick={copyResult} title="复制结果" disabled={!resultText}>
-            <Copy size={16} aria-hidden="true" />
-          </button>
-          <button className="button icon" type="button" onClick={clearAll} title="清空">
-            <Eraser size={16} aria-hidden="true" />
-          </button>
-        </div>
-      </header>
-
-      <form className="translate-workbench" onSubmit={handleSubmit}>
-        <section className="panel language-bar" aria-label="语言设置">
+    <section className="page translate-page app-translate-page">
+      <form className="translate-app-shell" onSubmit={handleSubmit}>
+        <section className="translate-language-strip" aria-label="语言设置">
           <AppSelect label="源语言" className="lang-control" buttonClassName="lang-select" value={sourceLang} options={languageOptions} onChange={setSourceLang} />
           <button className="button icon language-swap" type="button" onClick={swapLanguages} title="交换语言">
             <ArrowLeftRight size={18} aria-hidden="true" />
@@ -175,83 +162,73 @@ export function TranslatePage({ store, setStore }: PageProps) {
           <AppSelect label="目标语言" className="lang-control" buttonClassName="lang-select" value={targetLang} options={languageOptions} onChange={setTargetLang} />
         </section>
 
-        <section className="panel translate-pane source-pane">
-          <div className="translate-pane-head">
-            <div>
-              <div className="pane-kicker">原文</div>
-              <div className="pane-title">输入或粘贴要处理的内容</div>
-            </div>
+        <section className="translate-input-card">
+          <div className="translate-card-topline">
+            <span>{formatDetection(detection)}</span>
+            <span>{text.trim().length} 字</span>
           </div>
           <textarea
-            className="textarea translate-input"
+            className="textarea translate-input app-translate-input"
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="输入或粘贴要翻译的文本"
+            placeholder="输入单词查词，输入句子翻译"
           />
-          <div className="translate-pane-foot">
-            <div className="source-meta">
-              <span className="muted small">{text.trim().length} 字</span>
-              <span className="chip">{formatDetection(detection)}</span>
-            </div>
-            <div className="source-actions">
-              <button className="button" type="button" onClick={clearAll}>
-                <Eraser size={16} aria-hidden="true" />
-                清空
-              </button>
-              <button className="button primary" type="submit" disabled={isLoading || detection.intent === "empty"}>
-                {detection.intent === "lookup" ? <Search size={17} aria-hidden="true" /> : <Languages size={17} aria-hidden="true" />}
-                {primaryActionLabel}
-              </button>
-            </div>
+          <div className="translate-action-bar">
+            <button className="button ghost-button" type="button" onClick={clearAll} disabled={!text && !resultText && !error}>
+              <Eraser size={16} aria-hidden="true" />
+              清空
+            </button>
+            <button className="button primary" type="submit" disabled={isLoading || detection.intent === "empty"}>
+              {detection.intent === "lookup" ? <Search size={17} aria-hidden="true" /> : <Languages size={17} aria-hidden="true" />}
+              {primaryActionLabel}
+            </button>
           </div>
         </section>
 
-        <section className="panel translate-pane output-pane">
-          <div className="translate-pane-head">
+        <section className="translate-result-card">
+          <div className="translate-result-head">
             <div>
               <div className="pane-kicker">{resultTitle}</div>
-              <div className="pane-title">{dictionaryEntry ? dictionaryEntry.headword : "翻译结果与操作"}</div>
+              <div className="pane-title">{dictionaryEntry ? dictionaryEntry.headword : resultText ? "处理结果" : "等待输入"}</div>
             </div>
             <div className="result-toolbar compact">
-              <AppSelect className="provider-control" buttonClassName="provider-select" value={activeProviderId} options={providerOptions} onChange={setProviderId} placeholder="选择 Provider" />
               <button className="button icon" type="button" onClick={copyResult} disabled={!resultText} title="复制">
                 <Copy size={16} aria-hidden="true" />
               </button>
-              <button className="button" type="button" onClick={saveResultToVocabulary} disabled={!resultText}>
+              <button className="button icon" type="button" onClick={saveResultToVocabulary} disabled={!resultText} title="加入词汇本">
                 <Star size={16} aria-hidden="true" />
-                加入词汇本
               </button>
             </div>
           </div>
 
-          <div className="translate-result-surface">
+          <div className="translate-result-surface app-result-surface">
             {translation ? <TranslationResultPanel result={translation} /> : null}
             {dictionaryEntry ? <DictionaryResultPanel entry={dictionaryEntry} /> : null}
             {!translation && !dictionaryEntry && !error ? (
               <div className="translate-empty">
                 <Languages size={28} aria-hidden="true" />
-                <strong>译文会显示在这里</strong>
-                <span>单个英文词会优先查词，短语和句子会优先翻译。</span>
+                <strong>结果会显示在这里</strong>
+                <span>单词优先查词，句子优先翻译。</span>
               </div>
             ) : null}
+            {error ? <div className="error soft-error">{error}</div> : null}
           </div>
         </section>
 
-        <section className="translate-secondary">
-          <div className="secondary-block">
-            <div className="label">快速输入</div>
-            <div className="quick-inputs" aria-label="快速输入">
-              {quickInputs.map((value) => (
-                <button className="chip-button" type="button" key={value} onClick={() => setText(value)}>
-                  {value}
-                </button>
-              ))}
-            </div>
+        <section className="translate-bottom-sheet">
+          <div className="quick-inputs" aria-label="快速输入">
+            {quickInputs.map((value) => (
+              <button className="chip-button" type="button" key={value} onClick={() => setText(value)}>
+                {value}
+              </button>
+            ))}
           </div>
+          {providerOptions.length > 1 ? (
+            <AppSelect className="provider-control subtle-provider" buttonClassName="provider-select" value={activeProviderId} options={providerOptions} onChange={setProviderId} placeholder="翻译服务" />
+          ) : null}
           {translation?.matchedTerms.length ? <MatchedTerms terms={translation.matchedTerms} /> : null}
           {translation?.alternatives.length ? <AlternativeTranslations alternatives={translation.alternatives} /> : null}
-          {error ? <div className="error soft-error">{error}</div> : null}
-          {translation?.fallbackError ? <div className="notice soft-notice">已回退到 Mock Provider：{translation.fallbackError}</div> : null}
+          {translation?.fallbackError ? <div className="notice soft-notice">主服务不可用，已使用备用结果。</div> : null}
         </section>
       </form>
     </section>
@@ -339,5 +316,22 @@ function formatDetection(detection: InputDetection): string {
   if (detection.intent === "empty") {
     return "等待输入";
   }
-  return detection.intent === "lookup" ? "单词 / 查词" : `翻译 · ${detection.sourceLang} → ${detection.targetLang}`;
+  return detection.intent === "lookup" ? "单词 · 查词" : `翻译 · ${detection.sourceLang} → ${detection.targetLang}`;
+}
+
+function toFriendlyError(caught: unknown): string {
+  const message = caught instanceof Error ? caught.message : String(caught);
+  if (/network|failed to fetch|load failed/i.test(message)) {
+    return "网络连接失败。请检查网络，或者稍后再试。";
+  }
+  if (/429|limit|quota|rate/i.test(message)) {
+    return "当前翻译服务请求过多或达到限额。可以稍后再试，或在设置里切换服务。";
+  }
+  if (/401|403|key|unauthorized|forbidden/i.test(message)) {
+    return "服务凭据不可用。请到设置里检查 API Key 或 Provider 配置。";
+  }
+  if (/404|not found|no definition|未找到/i.test(message)) {
+    return "没有找到对应结果。可以换一个写法，或检查拼写。";
+  }
+  return message || "处理失败，请稍后再试。";
 }
