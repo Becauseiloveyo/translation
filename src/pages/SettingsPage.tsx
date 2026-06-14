@@ -1,5 +1,6 @@
 import { PlugZap, Plus, Save, Trash2 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
+import { AppSelect, AppSelectOption } from "../components/AppSelect";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/PageHeader";
 import { createDictionaryProvider, canUseRemoteDictionaryProvider } from "../services/dictionary/remoteDictionaryProviders";
@@ -38,7 +39,33 @@ const emptyProviderForm: ProviderForm = {
 };
 
 const purposes: ProviderPurpose[] = ["translate", "dictionary", "explain", "ocr"];
-const providerTypes: ProviderType[] = ["openai", "free_dictionary", "oxford", "merriam_webster", "deepl", "google", "custom", "mock"];
+
+const themeOptions: AppSelectOption[] = [
+  { value: "system", label: "跟随系统", description: "推荐" },
+  { value: "light", label: "浅色" },
+  { value: "dark", label: "深色" }
+];
+
+const historyOptions: AppSelectOption[] = [
+  { value: "true", label: "自动保存", description: "翻译结果保存到历史" },
+  { value: "false", label: "不自动保存" }
+];
+
+const providerTypeOptions: AppSelectOption[] = [
+  { value: "free_dictionary", label: "Free Dictionary", description: "无需 key，查词默认可用" },
+  { value: "oxford", label: "Oxford API", description: "官方 API，需要 app_id + app_key" },
+  { value: "merriam_webster", label: "Merriam-Webster", description: "官方 API，需要 key" },
+  { value: "openai", label: "OpenAI Compatible", description: "翻译/解释，需要兼容接口 key" },
+  { value: "deepl", label: "DeepL", description: "翻译占位" },
+  { value: "google", label: "Google", description: "翻译占位" },
+  { value: "custom", label: "Custom", description: "自定义 Provider" },
+  { value: "mock", label: "Mock", description: "离线演示兜底" }
+];
+
+const enabledOptions: AppSelectOption[] = [
+  { value: "true", label: "启用" },
+  { value: "false", label: "停用" }
+];
 
 export function SettingsPage({ store, setStore }: PageProps) {
   const [providerForm, setProviderForm] = useState<ProviderForm>(emptyProviderForm);
@@ -56,6 +83,21 @@ export function SettingsPage({ store, setStore }: PageProps) {
         ...current.settings,
         [key]: value
       }
+    }));
+  }
+
+  function applyProviderType(typeValue: string) {
+    const type = typeValue as ProviderType;
+    const preset = providerPreset(type);
+    setProviderForm((current) => ({
+      ...current,
+      type,
+      name: current.name.trim() ? current.name : preset.name,
+      baseUrl: current.baseUrl.trim() ? current.baseUrl : preset.baseUrl,
+      language: preset.language ?? current.language,
+      useFor: preset.useFor,
+      priority: preset.priority,
+      model: type === "openai" && !current.model ? "gpt-4.1-mini" : current.model
     }));
   }
 
@@ -156,7 +198,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
   }
 
   return (
-    <section className="page">
+    <section className="page settings-page">
       <PageHeader
         eyebrow="Settings"
         title="我的与设置"
@@ -167,33 +209,25 @@ export function SettingsPage({ store, setStore }: PageProps) {
         }
       />
 
-      <div className="grid-two">
-        <div className="panel pad stack">
+      <div className="grid-two settings-grid">
+        <div className="panel pad stack settings-card">
           <div>
             <div className="panel-title">偏好</div>
             <div className="muted small">查词优先，翻译作为辅助能力。</div>
           </div>
           <div className="grid-two">
-            <div className="field">
-              <label htmlFor="theme">主题</label>
-              <select id="theme" className="select" value={store.settings.theme} onChange={(event) => updateSetting("theme", event.target.value as AppSettings["theme"])}>
-                <option value="system">system</option>
-                <option value="light">light</option>
-                <option value="dark">dark</option>
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="auto-history">历史</label>
-              <select
-                id="auto-history"
-                className="select"
-                value={store.settings.autoSaveHistory ? "true" : "false"}
-                onChange={(event) => updateSetting("autoSaveHistory", event.target.value === "true")}
-              >
-                <option value="true">自动保存</option>
-                <option value="false">不自动保存</option>
-              </select>
-            </div>
+            <AppSelect
+              label="主题"
+              value={store.settings.theme}
+              options={themeOptions}
+              onChange={(value) => updateSetting("theme", value as AppSettings["theme"])}
+            />
+            <AppSelect
+              label="历史"
+              value={store.settings.autoSaveHistory ? "true" : "false"}
+              options={historyOptions}
+              onChange={(value) => updateSetting("autoSaveHistory", value === "true")}
+            />
           </div>
           <div className="grid-two">
             <div className="field">
@@ -227,11 +261,11 @@ export function SettingsPage({ store, setStore }: PageProps) {
           <div className="notice">API key 当前仅写入本地应用数据。不要把自己的 key 提交到公开仓库。</div>
         </div>
 
-        <form className="panel pad stack" onSubmit={saveProvider}>
+        <form className="panel pad stack settings-card provider-wizard" onSubmit={saveProvider}>
           <div className="item-head">
             <div>
               <div className="panel-title">{providerForm.id ? "编辑 Provider" : "新增 Provider"}</div>
-              <div className="muted small">Oxford / Merriam-Webster 使用官方 API；Free Dictionary 无需 key。</div>
+              <div className="muted small">选择预设后会自动填入用途、Base URL 和优先级；key 仍需要你自己申请和填写。</div>
             </div>
             {providerForm.id ? (
               <button className="button" type="button" onClick={() => setProviderForm(emptyProviderForm)}>
@@ -240,6 +274,23 @@ export function SettingsPage({ store, setStore }: PageProps) {
               </button>
             ) : null}
           </div>
+
+          <AppSelect label="Provider 类型" value={providerForm.type} options={providerTypeOptions} onChange={applyProviderType} />
+
+          <div className="provider-preset-grid" aria-label="常用预设">
+            {providerTypeOptions.slice(0, 4).map((option) => (
+              <button
+                className={providerForm.type === option.value ? "preset-card active" : "preset-card"}
+                type="button"
+                key={option.value}
+                onClick={() => applyProviderType(option.value)}
+              >
+                <strong>{option.label}</strong>
+                <span>{option.description}</span>
+              </button>
+            ))}
+          </div>
+
           <div className="grid-two">
             <div className="field">
               <label htmlFor="provider-name">名称</label>
@@ -250,22 +301,14 @@ export function SettingsPage({ store, setStore }: PageProps) {
                 onChange={(event) => setProviderForm({ ...providerForm, name: event.target.value })}
               />
             </div>
-            <div className="field">
-              <label htmlFor="provider-type">类型</label>
-              <select
-                id="provider-type"
-                className="select"
-                value={providerForm.type}
-                onChange={(event) => setProviderForm({ ...providerForm, type: event.target.value as ProviderType })}
-              >
-                {providerTypes.map((type) => (
-                  <option value={type} key={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <AppSelect
+              label="状态"
+              value={providerForm.enabled ? "true" : "false"}
+              options={enabledOptions}
+              onChange={(value) => setProviderForm({ ...providerForm, enabled: value === "true" })}
+            />
           </div>
+
           <div className="field">
             <label htmlFor="provider-base">Base URL</label>
             <input
@@ -309,7 +352,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
               />
             </div>
           </div>
-          <div className="grid-three">
+          <div className="grid-two">
             <div className="field">
               <label htmlFor="provider-model">Model</label>
               <input
@@ -329,18 +372,6 @@ export function SettingsPage({ store, setStore }: PageProps) {
                 onChange={(event) => setProviderForm({ ...providerForm, priority: Number(event.target.value) })}
               />
             </div>
-            <div className="field">
-              <label htmlFor="provider-enabled">状态</label>
-              <select
-                id="provider-enabled"
-                className="select"
-                value={providerForm.enabled ? "true" : "false"}
-                onChange={(event) => setProviderForm({ ...providerForm, enabled: event.target.value === "true" })}
-              >
-                <option value="true">enabled</option>
-                <option value="false">disabled</option>
-              </select>
-            </div>
           </div>
           <div className="field">
             <label htmlFor="provider-target">默认翻译目标语言</label>
@@ -353,21 +384,21 @@ export function SettingsPage({ store, setStore }: PageProps) {
           </div>
           <div className="stack" style={{ gap: 6 }}>
             <div className="label">用途</div>
-            <div className="row">
+            <div className="row purpose-row">
               {purposes.map((purpose) => (
-                <label className="chip" key={purpose}>
-                  <input
-                    type="checkbox"
-                    checked={providerForm.useFor.includes(purpose)}
-                    onChange={(event) => {
-                      const useFor = event.target.checked
-                        ? [...providerForm.useFor, purpose]
-                        : providerForm.useFor.filter((item) => item !== purpose);
-                      setProviderForm({ ...providerForm, useFor });
-                    }}
-                  />
+                <button
+                  className={providerForm.useFor.includes(purpose) ? "chip-button active" : "chip-button"}
+                  type="button"
+                  key={purpose}
+                  onClick={() => {
+                    const useFor = providerForm.useFor.includes(purpose)
+                      ? providerForm.useFor.filter((item) => item !== purpose)
+                      : [...providerForm.useFor, purpose];
+                    setProviderForm({ ...providerForm, useFor });
+                  }}
+                >
                   {purpose}
-                </label>
+                </button>
               ))}
             </div>
           </div>
@@ -378,7 +409,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
         </form>
       </div>
 
-      <div className="panel" style={{ marginTop: 16 }}>
+      <div className="panel provider-list-panel" style={{ marginTop: 16 }}>
         <div className="panel-header">
           <div>
             <div className="panel-title">Providers</div>
@@ -392,9 +423,9 @@ export function SettingsPage({ store, setStore }: PageProps) {
           </div>
         ) : null}
         {sortedProviders.length ? (
-          <div className="list">
+          <div className="list provider-list">
             {sortedProviders.map((provider) => (
-              <div className="list-item" key={provider.id}>
+              <div className="list-item provider-list-item" key={provider.id}>
                 <div className="item-head">
                   <button className="link-button" type="button" onClick={() => editProvider(provider)}>
                     <div className="item-title">{provider.name}</div>
@@ -433,6 +464,52 @@ export function SettingsPage({ store, setStore }: PageProps) {
       </div>
     </section>
   );
+}
+
+function providerPreset(type: ProviderType): Pick<ProviderForm, "name" | "baseUrl" | "language" | "useFor" | "priority"> {
+  if (type === "free_dictionary") {
+    return {
+      name: "Free Dictionary API",
+      baseUrl: "https://api.dictionaryapi.dev/api/v2/entries",
+      language: "en",
+      useFor: ["dictionary"],
+      priority: 20
+    };
+  }
+  if (type === "oxford") {
+    return {
+      name: "Oxford Dictionaries API",
+      baseUrl: "https://od-api.oxforddictionaries.com/api/v2",
+      language: "en-gb",
+      useFor: ["dictionary"],
+      priority: 30
+    };
+  }
+  if (type === "merriam_webster") {
+    return {
+      name: "Merriam-Webster Collegiate",
+      baseUrl: "https://www.dictionaryapi.com/api/v3/references/collegiate/json",
+      language: "en",
+      useFor: ["dictionary"],
+      priority: 40
+    };
+  }
+  if (type === "openai") {
+    return {
+      name: "OpenAI Compatible",
+      baseUrl: "https://api.example.invalid/v1",
+      language: "auto",
+      useFor: ["translate", "explain"],
+      priority: 10
+    };
+  }
+  return {
+    name: `${type} Provider`,
+    baseUrl: "",
+    language: "auto",
+    useFor: type === "mock" ? ["translate", "dictionary"] : ["translate"],
+    priority: 100
+  };
 }
 
 function isDictionaryApiProviderType(type: ProviderType): boolean {
