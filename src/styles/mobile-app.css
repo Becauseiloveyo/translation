@@ -1,6 +1,7 @@
 /* Final mobile-app layer: real app scrolling, custom menus, softer transitions. */
 :root {
   --app-font: Arial, "Helvetica Neue", "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
+  --system-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --nav-height: 82px;
   --topbar-height: 68px;
   --accent-2: #11a88a;
@@ -23,6 +24,14 @@ input,
 textarea,
 select {
   font-family: var(--app-font) !important;
+}
+
+html.font-system body,
+html.font-system button,
+html.font-system input,
+html.font-system textarea,
+html.font-system select {
+  font-family: var(--system-font) !important;
 }
 
 body {
@@ -366,6 +375,129 @@ body {
   .settings-grid,
   .translate-workbench {
     gap: 14px;
+  }
+
+  .translate-page .translate-titlebar {
+    display: none !important;
+  }
+
+  .translate-workbench {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px !important;
+  }
+
+  .translate-page .language-bar {
+    order: 1;
+    padding: 10px !important;
+    grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .translate-page .lang-control .app-select-label {
+    display: none;
+  }
+
+  .translate-page .lang-control .app-select-trigger {
+    min-height: 42px;
+    border-radius: 15px;
+    font-size: 14px;
+  }
+
+  .translate-page .language-swap {
+    min-width: 42px;
+    width: 42px;
+    height: 42px;
+    align-self: center;
+  }
+
+  .translate-page .source-pane {
+    order: 2;
+  }
+
+  .translate-page .output-pane {
+    order: 3;
+  }
+
+  .translate-page .translate-secondary {
+    order: 4;
+  }
+
+  .translate-page .translate-pane {
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .translate-page .translate-pane-head {
+    padding: 11px 12px !important;
+  }
+
+  .translate-page .pane-kicker {
+    margin-bottom: 2px;
+  }
+
+  .translate-page .translate-input {
+    min-height: 104px !important;
+    max-height: 152px;
+    flex: 0 0 auto !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    padding: 14px !important;
+    font-size: 17px !important;
+    line-height: 1.55 !important;
+  }
+
+  .translate-page .translate-pane-foot {
+    min-height: 54px !important;
+    padding: 9px 12px !important;
+  }
+
+  .translate-page .source-meta .small {
+    display: none;
+  }
+
+  .translate-page .source-actions .button:not(.primary) {
+    display: none;
+  }
+
+  .translate-page .output-pane .translate-pane-head {
+    align-items: center;
+  }
+
+  .translate-page .result-toolbar .button:not(:disabled) {
+    min-height: 38px;
+  }
+
+  .translate-page .result-toolbar .provider-control,
+  .translate-page .result-toolbar .button.icon {
+    display: none;
+  }
+
+  .translate-page .translate-result-surface {
+    min-height: 190px !important;
+    max-height: none;
+    overflow: visible !important;
+    padding: 14px !important;
+    touch-action: pan-y;
+  }
+
+  .translate-page .translation-output,
+  .translate-page .dictionary-card {
+    min-height: auto !important;
+  }
+
+  .translate-page .result-text {
+    font-size: 18px !important;
+    line-height: 1.65;
+  }
+
+  .translate-page .translate-empty {
+    min-height: 150px !important;
+  }
+
+  .translate-page .translate-secondary {
+    gap: 8px !important;
   }
 
   .app-select-menu {
