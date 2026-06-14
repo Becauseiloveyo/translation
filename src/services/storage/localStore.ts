@@ -26,6 +26,18 @@ export function createInitialStore(): AppStore {
     },
     apiProviders: [
       {
+        id: "provider_mymemory_free",
+        name: "MyMemory Free Translate",
+        type: "mymemory",
+        baseUrl: "https://api.mymemory.translated.net/get",
+        enabled: true,
+        priority: 10,
+        useFor: ["translate"],
+        defaultTargetLang: "zh",
+        createdAt,
+        updatedAt: createdAt
+      },
+      {
         id: "provider_free_dictionary",
         name: "Free Dictionary API",
         type: "free_dictionary",
@@ -62,25 +74,25 @@ export function createInitialStore(): AppStore {
         updatedAt: createdAt
       },
       {
-        id: "provider_mock",
-        name: "Mock Provider",
-        type: "mock",
-        enabled: true,
-        priority: 100,
-        useFor: ["translate", "dictionary"],
-        defaultTargetLang: "zh",
-        createdAt,
-        updatedAt: createdAt
-      },
-      {
         id: "provider_openai_compatible",
         name: "OpenAI Compatible",
         type: "openai",
         baseUrl: "https://api.example.invalid/v1",
         model: "gpt-4.1-mini",
         enabled: false,
-        priority: 10,
+        priority: 20,
         useFor: ["translate", "explain"],
+        defaultTargetLang: "zh",
+        createdAt,
+        updatedAt: createdAt
+      },
+      {
+        id: "provider_mock",
+        name: "Mock Provider",
+        type: "mock",
+        enabled: true,
+        priority: 100,
+        useFor: ["dictionary"],
         defaultTargetLang: "zh",
         createdAt,
         updatedAt: createdAt
