@@ -4,6 +4,7 @@ import { App } from "./App";
 import "./styles/globals.css";
 import "./styles/android-polish.css";
 import "./styles/mobile-app.css";
+import "./styles/neo-ui.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
