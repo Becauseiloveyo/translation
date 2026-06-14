@@ -26,6 +26,10 @@ export function App() {
     root.classList.toggle("dark", useDark);
   }, [store.settings.theme]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("font-system", store.settings.fontMode === "system");
+  }, [store.settings.fontMode]);
+
   const content = useMemo(() => {
     const shared = { store, setStore };
     switch (page) {
