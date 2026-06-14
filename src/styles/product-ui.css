@@ -1,0 +1,392 @@
+/* Product UI layer: focused, modern, animated mobile experience. */
+:root {
+  --product-radius: 30px;
+  --product-shadow: 0 20px 60px rgba(15, 23, 42, 0.10);
+  --product-shadow-strong: 0 26px 70px rgba(37, 99, 235, 0.16);
+  --product-glass: rgba(255, 255, 255, 0.78);
+  --product-border: rgba(255, 255, 255, 0.7);
+  --product-blue: #2563eb;
+  --product-teal: #14b8a6;
+  --product-purple: #8b5cf6;
+}
+
+body {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(37, 99, 235, 0.16), transparent 260px),
+    radial-gradient(circle at 90% 12%, rgba(20, 184, 166, 0.12), transparent 260px),
+    linear-gradient(180deg, #fafdff 0%, #f4f7fb 42%, #edf4ff 100%) !important;
+}
+
+.page {
+  animation: product-page-in 140ms cubic-bezier(0.2, 0, 0, 1) both !important;
+}
+
+@keyframes product-page-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.992);
+    filter: blur(1px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+button,
+.button,
+.chip-button,
+.app-select-trigger,
+.lookup-search,
+.lookup-result-card,
+.panel {
+  transition:
+    transform 120ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 120ms cubic-bezier(0.2, 0, 0, 1),
+    background-color 140ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 160ms cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+button:active,
+.button:active,
+.chip-button:active,
+.app-select-trigger:active {
+  transform: scale(0.965) !important;
+}
+
+.mobile-topbar {
+  min-height: calc(62px + var(--safe-top)) !important;
+  padding-bottom: 8px !important;
+}
+
+.mobile-brand {
+  font-size: 11px !important;
+  opacity: 0.58;
+}
+
+.mobile-title {
+  font-size: 22px !important;
+  font-weight: 820 !important;
+}
+
+.mobile-settings-button {
+  border-radius: 999px !important;
+  width: 40px !important;
+  height: 40px !important;
+}
+
+.bottom-nav {
+  left: 22px !important;
+  right: 22px !important;
+  min-height: 66px !important;
+  padding: 6px !important;
+  border-radius: 999px !important;
+}
+
+.bottom-nav-item {
+  border-radius: 999px !important;
+  gap: 2px !important;
+}
+
+.bottom-nav-item::before {
+  inset: 5px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(20, 184, 166, 0.12)) !important;
+}
+
+.bottom-nav-item.active svg {
+  transform: translateY(-1px) scale(1.08) !important;
+}
+
+.bottom-nav-item.active::after {
+  bottom: 7px !important;
+  height: 3px !important;
+  width: 18px !important;
+  background: linear-gradient(90deg, var(--product-blue), var(--product-teal)) !important;
+}
+
+/* Mature dictionary home */
+.mature-dictionary-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mature-page-hero {
+  min-height: 112px;
+  padding: 18px;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.5), transparent 120px),
+    linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(20, 184, 166, 0.10)),
+    var(--product-glass);
+  box-shadow: var(--product-shadow);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.mature-page-hero::before {
+  content: "";
+  position: absolute;
+  right: -22px;
+  top: -28px;
+  width: 110px;
+  height: 110px;
+  border-radius: 34px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(20, 184, 166, 0.14));
+  transform: rotate(18deg);
+}
+
+.mature-page-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.mature-page-hero h1 {
+  margin: 2px 0 0;
+  color: #111827;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.ghost-button {
+  border: 0 !important;
+  background: rgba(255, 255, 255, 0.76) !important;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+.lookup-shell,
+.lookup-result-card {
+  border-radius: var(--product-radius);
+  background: var(--product-glass);
+  box-shadow: var(--product-shadow);
+  backdrop-filter: blur(20px) saturate(150%);
+  padding: 16px;
+}
+
+.lookup-search {
+  min-height: 64px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04), 0 14px 34px rgba(37, 99, 235, 0.10);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 16px;
+}
+
+.lookup-search input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 680;
+}
+
+.lookup-search button {
+  height: 48px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--product-blue), #60a5fa);
+  color: white;
+  padding: 0 18px;
+  font-weight: 760;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.18);
+}
+
+.lookup-search button:disabled {
+  opacity: 0.55;
+}
+
+.lookup-meta-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.lookup-meta-row button {
+  border: 0;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  padding: 7px 11px;
+  font-weight: 760;
+}
+
+.mature-quick-row {
+  margin-top: 12px;
+}
+
+.lookup-result-card {
+  min-height: 260px;
+}
+
+.lookup-result-card .empty-state {
+  min-height: 210px;
+}
+
+.lookup-result-card .definition-card {
+  box-shadow: none !important;
+  background: rgba(255, 255, 255, 0.62) !important;
+}
+
+/* Translation workspace: remove old form feeling. */
+.translate-page .language-bar {
+  box-shadow: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.translate-page .language-bar .app-select-trigger,
+.translate-page .language-swap {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 0 !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06) !important;
+}
+
+.translate-page .source-pane,
+.translate-page .output-pane {
+  background: rgba(255, 255, 255, 0.78) !important;
+  box-shadow: var(--product-shadow) !important;
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+.translate-page .source-pane {
+  border-left: 4px solid rgba(37, 99, 235, 0.34) !important;
+}
+
+.translate-page .output-pane {
+  border-left: 4px solid rgba(20, 184, 166, 0.36) !important;
+}
+
+.translate-page .pane-title {
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+}
+
+.translate-page .translate-empty strong {
+  font-size: 20px;
+  letter-spacing: -0.035em;
+}
+
+.translate-page .translate-empty span {
+  display: none !important;
+}
+
+.translate-page .soft-notice,
+.translate-page .soft-error {
+  border-radius: 22px !important;
+  box-shadow: none !important;
+}
+
+/* Remove remaining explanatory clutter on mobile. */
+@media (max-width: 980px) {
+  .mobile-topbar {
+    background: transparent !important;
+    backdrop-filter: none !important;
+  }
+
+  .main-content {
+    padding-top: 8px !important;
+  }
+
+  .page-header .muted,
+  .panel-header .muted.small,
+  .translate-titlebar p,
+  .dictionary-focus-page .muted.small {
+    display: none !important;
+  }
+
+  .mature-page-hero {
+    min-height: 102px;
+    padding: 16px;
+  }
+
+  .mature-page-hero h1 {
+    font-size: 34px;
+  }
+
+  .lookup-shell {
+    padding: 14px;
+  }
+
+  .lookup-search {
+    min-height: 60px;
+    border-radius: 22px;
+  }
+
+  .lookup-search button {
+    height: 44px;
+    padding: 0 15px;
+  }
+
+  .lookup-result-card {
+    min-height: 245px;
+    padding: 15px;
+  }
+
+  .translate-page .source-pane,
+  .translate-page .output-pane {
+    border-left-width: 0 !important;
+  }
+
+  .translate-page .translate-pane-head {
+    padding: 12px 14px 4px !important;
+  }
+
+  .translate-page .translate-pane-foot {
+    padding: 6px 12px 12px !important;
+  }
+
+  .translate-page .source-actions {
+    width: 100%;
+  }
+
+  .translate-page .source-actions .button.primary {
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .mature-page-hero,
+  .lookup-shell,
+  .lookup-result-card,
+  .translate-page .source-pane,
+  .translate-page .output-pane {
+    border-radius: 28px !important;
+  }
+
+  .lookup-search {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .lookup-search button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page,
+  button,
+  .button,
+  .chip-button,
+  .app-select-trigger {
+    animation: none !important;
+    transition: none !important;
+  }
+}
