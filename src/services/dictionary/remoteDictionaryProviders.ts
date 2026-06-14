@@ -229,18 +229,7 @@ function mapFreeDictionaryEntry(entry: FreeDictionaryEntry, fallbackWord: string
   const phonetics = entry.phonetics ?? [];
   const audio = normalizeAudioUrl(phonetics.find((item) => item.audio)?.audio);
   const phoneticText = phonetics.find((item) => item.text)?.text ?? entry.phonetic;
-  const definitions = (entry.meanings ?? [])
-    .flatMap((meaning) =>
-      (meaning.definitions ?? []).map((definition) => ({
-        id: createId("def"),
-        partOfSpeech: meaning.partOfSpeech,
-        definitionEn: definition.definition,
-        exampleEn: definition.example,
-        source
-      }))
-    )
-    .filter((definition): definition is Definition => Boolean(definition.definitionEn))
-    .slice(0, 16);
+  const definitions = buildFreeDictionaryDefinitions(entry.meanings ?? [], source).slice(0, 16);
 
   const synonyms = unique((entry.meanings ?? []).flatMap((meaning) => meaning.synonyms ?? []));
   const antonyms = unique((entry.meanings ?? []).flatMap((meaning) => meaning.antonyms ?? []));
@@ -264,6 +253,25 @@ function mapFreeDictionaryEntry(entry: FreeDictionaryEntry, fallbackWord: string
     createdAt: now,
     updatedAt: now
   };
+}
+
+function buildFreeDictionaryDefinitions(meanings: FreeDictionaryMeaning[], source: string): Definition[] {
+  const definitions: Definition[] = [];
+  for (const meaning of meanings) {
+    for (const definition of meaning.definitions ?? []) {
+      if (!definition.definition) {
+        continue;
+      }
+      definitions.push({
+        id: createId("def"),
+        partOfSpeech: meaning.partOfSpeech,
+        definitionEn: definition.definition,
+        exampleEn: definition.example,
+        source
+      });
+    }
+  }
+  return definitions;
 }
 
 function mapOxfordEntry(data: OxfordResponse, fallbackWord: string, lang: string, source: string): DictionaryEntry | null {
@@ -331,17 +339,7 @@ function mapMerriamEntry(data: MerriamResponse, fallbackWord: string, lang: stri
   const headword = cleanMerriamText(first.hwi?.hw ?? first.meta?.id ?? fallbackWord).replace(/\*/g, "");
   const pronunciation = first.hwi?.prs?.[0];
   const audio = pronunciation?.sound?.audio ? merriamAudioUrl(pronunciation.sound.audio) : undefined;
-  const definitions = entries
-    .flatMap((entry) =>
-      (entry.shortdef ?? []).map((definition) => ({
-        id: createId("def"),
-        partOfSpeech: entry.fl,
-        definitionEn: cleanMerriamText(definition),
-        source
-      }))
-    )
-    .filter((definition): definition is Definition => Boolean(definition.definitionEn))
-    .slice(0, 16);
+  const definitions = buildMerriamDefinitions(entries, source).slice(0, 16);
   const now = nowIso();
 
   return {
@@ -356,6 +354,25 @@ function mapMerriamEntry(data: MerriamResponse, fallbackWord: string, lang: stri
     createdAt: now,
     updatedAt: now
   };
+}
+
+function buildMerriamDefinitions(entries: MerriamEntry[], source: string): Definition[] {
+  const definitions: Definition[] = [];
+  for (const entry of entries) {
+    for (const rawDefinition of entry.shortdef ?? []) {
+      const definitionEn = cleanMerriamText(rawDefinition);
+      if (!definitionEn) {
+        continue;
+      }
+      definitions.push({
+        id: createId("def"),
+        partOfSpeech: entry.fl,
+        definitionEn,
+        source
+      });
+    }
+  }
+  return definitions;
 }
 
 function includesDialect(pronunciation: OxfordPronunciation, token: string): boolean {
