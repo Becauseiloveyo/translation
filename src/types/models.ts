@@ -66,8 +66,19 @@ export type VocabularyItem = {
   translation?: string;
   note?: string;
   status: VocabularyStatus;
+  reviewCount?: number;
+  masteredCount?: number;
+  lastReviewedAt?: string;
+  nextReviewAt?: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type RecentLookup = {
+  id: string;
+  text: string;
+  kind: "word" | "phrase" | "sentence";
+  createdAt: string;
 };
 
 export type UserTerm = {
@@ -154,6 +165,7 @@ export type AppStore = {
   settings: AppSettings;
   apiProviders: ApiProvider[];
   vocabulary: VocabularyItem[];
+  recentLookups: RecentLookup[];
   glossary: UserTerm[];
   history: TranslationResult[];
   dictionarySources: DictionarySource[];
