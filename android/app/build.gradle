@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 
+// Release workflow overrides these values with -PVERSION_CODE and -PVERSION_NAME.
 def releaseVersionCode = (project.findProperty('VERSION_CODE') ?: '1').toString().toInteger()
 def releaseVersionName = (project.findProperty('VERSION_NAME') ?: '1.0.0').toString()
 
@@ -38,7 +39,7 @@ dependencies {
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
-    testImplementation "junit:junit:$junitVersion"
+    testImplementation "junit:junit:$jUnitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
