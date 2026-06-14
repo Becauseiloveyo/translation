@@ -33,6 +33,11 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Use npmjs registry
+        run: |
+          npm config set registry https://registry.npmjs.org/
+          npm config set replace-registry-host always
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -40,8 +45,16 @@ jobs:
           java-version: 17
           cache: gradle
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Build web app and sync Capacitor
         run: npm run android:sync
@@ -51,7 +64,7 @@ jobs:
 
       - name: Build debug APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Rename APK
         run: |
