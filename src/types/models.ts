@@ -1,5 +1,5 @@
 export type ProviderPurpose = "translate" | "dictionary" | "explain" | "ocr";
-export type ProviderType = "openai" | "deepl" | "google" | "oxford" | "merriam_webster" | "free_dictionary" | "custom" | "mock";
+export type ProviderType = "openai" | "deepl" | "google" | "oxford" | "merriam_webster" | "free_dictionary" | "mymemory" | "custom" | "mock";
 export type ThemeMode = "light" | "dark" | "system";
 export type VocabularyStatus = "new" | "learning" | "mastered";
 export type DictionarySourceType = "local_file" | "local_folder" | "download" | "api";
