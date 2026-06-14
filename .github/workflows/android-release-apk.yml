@@ -205,7 +205,6 @@ jobs:
 
           UNSIGNED_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
           ALIGNED_APK="artifacts/LiteDict-${VERSION_NAME}-aligned.apk"
-          SIGNED_APK="artifacts/LiteDict-release.apk"
           VERSIONED_APK="artifacts/LiteDict-${VERSION_NAME}.apk"
           BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
 
@@ -215,18 +214,15 @@ jobs:
             --ks-pass "pass:$STORE_PASS" \
             --ks-key-alias "$KEY_ALIAS" \
             --key-pass "pass:$KEY_PASS" \
-            --out "$SIGNED_APK" \
+            --out "$VERSIONED_APK" \
             "$ALIGNED_APK"
-          "$BUILD_TOOLS/apksigner" verify --print-certs "$SIGNED_APK"
-          cp "$SIGNED_APK" "$VERSIONED_APK"
+          "$BUILD_TOOLS/apksigner" verify --print-certs "$VERSIONED_APK"
 
       - name: Upload signed release APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: LiteDict-release-apk
-          path: |
-            artifacts/LiteDict-release.apk
-            artifacts/LiteDict-${{ steps.release-meta.outputs.version_name }}.apk
+          path: artifacts/LiteDict-${{ steps.release-meta.outputs.version_name }}.apk
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -237,9 +233,7 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: LiteDict ${{ steps.release-meta.outputs.version_name }}
           body_path: release-notes.md
-          files: |
-            artifacts/LiteDict-release.apk
-            artifacts/LiteDict-${{ steps.release-meta.outputs.version_name }}.apk
+          files: artifacts/LiteDict-${{ steps.release-meta.outputs.version_name }}.apk
           draft: false
           prerelease: false
 
