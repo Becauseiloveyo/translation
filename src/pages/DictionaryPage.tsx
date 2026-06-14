@@ -3,7 +3,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { EmptyState } from "../components/EmptyState";
 import { PageKey } from "../components/AppShell";
 import { lookupDictionary } from "../services/dictionary/localDictionaryProvider";
-import { upsertVocabulary } from "../services/storage/localStore";
+import { addRecentLookup, upsertVocabulary } from "../services/storage/localStore";
 import { PageProps } from "../types/app";
 import { DictionaryEntry } from "../types/models";
 import { createId, nowIso } from "../utils/id";
@@ -12,7 +12,7 @@ type DictionaryPageProps = PageProps & {
   onNavigate?: (page: PageKey) => void;
 };
 
-const quickWords = ["serendipity", "sustainable", "local-first", "translation"];
+const defaultQuickWords = ["serendipity", "sustainable", "local-first", "translation"];
 
 export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPageProps) {
   const [query, setQuery] = useState("");
@@ -20,6 +20,9 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const queryKind = useMemo(() => getQueryKind(query), [query]);
+  const recentWords = useMemo(() => store.recentLookups.filter((item) => item.kind === "word").slice(0, 6), [store.recentLookups]);
+  const suggestions = useMemo(() => getSuggestions(query, store.vocabulary.map((item) => item.word)), [query, store.vocabulary]);
+  const quickWords = recentWords.length ? recentWords.map((item) => item.text) : defaultQuickWords;
 
   async function handleLookup(event: FormEvent) {
     event.preventDefault();
@@ -35,9 +38,11 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
     }
     setIsLoading(true);
     try {
-      setEntry(await lookupDictionary(store, trimmed));
+      const result = await lookupDictionary(store, trimmed);
+      setEntry(result);
+      setStore((current) => addRecentLookup(current, { text: result.headword, kind: "word" }));
     } catch (caught) {
-      setError((caught as Error).message);
+      setError(toFriendlyLookupError(caught));
     } finally {
       setIsLoading(false);
     }
@@ -57,6 +62,10 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
         translation: first?.definitionZh ?? first?.definitionEn,
         note: entry.source ? `来自 ${entry.source}` : undefined,
         status: existed?.status ?? "new",
+        reviewCount: existed?.reviewCount ?? 0,
+        masteredCount: existed?.masteredCount ?? 0,
+        lastReviewedAt: existed?.lastReviewedAt,
+        nextReviewAt: existed?.nextReviewAt ?? now,
         createdAt: existed?.createdAt ?? now,
         updatedAt: now
       })
@@ -123,6 +132,17 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
             </button>
           ))}
         </div>
+
+        {suggestions.length ? (
+          <div className="suggestion-row">
+            <span>可能想查</span>
+            {suggestions.map((word) => (
+              <button type="button" key={word} onClick={() => applyQuickWord(word)}>
+                {word}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <section className="lookup-result-card">
@@ -175,7 +195,7 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
             </div>
           </div>
         ) : (
-          <EmptyState title="输入单词开始" />
+          <EmptyState title="输入单词开始" body={recentWords.length ? "最近查过的单词会自动显示在输入框下方。" : undefined} />
         )}
       </section>
     </section>
@@ -205,4 +225,60 @@ function getQueryKind(query: string) {
     return "短语";
   }
   return "句子";
+}
+
+function getSuggestions(query: string, words: string[]): string[] {
+  const trimmed = query.trim().toLocaleLowerCase();
+  if (trimmed.length < 2) {
+    return [];
+  }
+  const uniqueWords = Array.from(new Set(words.map((word) => word.trim()).filter(Boolean)));
+  return uniqueWords
+    .map((word) => ({ word, score: suggestionScore(trimmed, word.toLocaleLowerCase()) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.word.localeCompare(b.word))
+    .slice(0, 4)
+    .map((item) => item.word);
+}
+
+function suggestionScore(query: string, word: string): number {
+  if (word === query) {
+    return 0;
+  }
+  if (word.startsWith(query)) {
+    return 100 - word.length;
+  }
+  if (word.includes(query)) {
+    return 60 - word.length;
+  }
+  const distance = levenshtein(query, word.slice(0, Math.max(query.length, 3)));
+  return distance <= 2 ? 30 - distance : 0;
+}
+
+function levenshtein(a: string, b: string): number {
+  const rows = Array.from({ length: a.length + 1 }, (_, index) => [index]);
+  for (let column = 1; column <= b.length; column += 1) {
+    rows[0][column] = column;
+  }
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      rows[i][j] = Math.min(
+        rows[i - 1][j] + 1,
+        rows[i][j - 1] + 1,
+        rows[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return rows[a.length][b.length];
+}
+
+function toFriendlyLookupError(caught: unknown): string {
+  const message = caught instanceof Error ? caught.message : String(caught);
+  if (/network|failed to fetch|load failed/i.test(message)) {
+    return "网络连接失败。请检查网络后再查词。";
+  }
+  if (/404|not found|no definition|未找到/i.test(message)) {
+    return "没有找到这个单词。可以检查拼写，或换成原形再查。";
+  }
+  return message || "查词失败，请稍后再试。";
 }
