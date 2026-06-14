@@ -1,5 +1,6 @@
 import { ArrowLeftRight, Copy, Eraser, Languages, Search, Sparkles, Star } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
+import { AppSelect } from "../components/AppSelect";
 import { lookupDictionary } from "../services/dictionary/localDictionaryProvider";
 import { translateWithProvider } from "../services/providers/registry";
 import { addHistory, upsertVocabulary } from "../services/storage/localStore";
@@ -17,7 +18,7 @@ type TranslateState = {
 };
 
 const languageOptions = [
-  { value: "auto", label: "自动检测" },
+  { value: "auto", label: "自动检测", description: "按内容判断语言" },
   { value: "zh", label: "中文" },
   { value: "en", label: "English" },
   { value: "ja", label: "日本語" },
@@ -39,10 +40,13 @@ export function TranslatePage({ store, setStore }: PageProps) {
   const [dictionaryEntry, setDictionaryEntry] = useState<DictionaryEntry | null>(null);
   const detection = useMemo(() => detectInput(text, sourceLang, targetLang), [sourceLang, targetLang, text]);
 
-  const providerOptions = store.apiProviders.filter((provider) => provider.useFor.includes("translate"));
+  const providerOptions = store.apiProviders
+    .filter((provider) => provider.enabled && provider.useFor.includes("translate"))
+    .map((provider) => ({ value: provider.id, label: provider.name, description: provider.type }));
   const resultText = translation?.translatedText ?? dictionaryEntry?.definitions[0]?.definitionZh ?? dictionaryEntry?.definitions[0]?.definitionEn ?? "";
   const resultTitle = dictionaryEntry ? "词典释义" : "译文";
   const primaryActionLabel = isLoading ? "处理中" : detection.intent === "lookup" ? "查词" : "翻译";
+  const activeProviderId = providerOptions.some((provider) => provider.value === providerId) ? providerId : providerOptions[0]?.value ?? "provider_mock";
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -72,7 +76,7 @@ export function TranslatePage({ store, setStore }: PageProps) {
             sourceLang: nextDetection.sourceLang,
             targetLang: nextDetection.targetLang
           },
-          providerId
+          activeProviderId
         );
 
         setTranslation({
@@ -146,13 +150,13 @@ export function TranslatePage({ store, setStore }: PageProps) {
 
   return (
     <section className="page translate-page">
-      <header className="translate-titlebar">
+      <header className="translate-titlebar app-hero compact-hero">
         <div>
           <div className="eyebrow">Translate</div>
           <h1>翻译与查词</h1>
-          <p>快速翻译、查词、术语匹配，并把有价值的结果保存到词汇本。</p>
+          <p>输入单词优先查词；输入短语和句子时进入翻译流程，保留术语匹配和词汇本保存。</p>
         </div>
-        <div className="page-actions">
+        <div className="page-actions floating-actions">
           <button className="button icon" type="button" onClick={copyResult} title="复制结果" disabled={!resultText}>
             <Copy size={16} aria-hidden="true" />
           </button>
@@ -164,29 +168,11 @@ export function TranslatePage({ store, setStore }: PageProps) {
 
       <form className="translate-workbench" onSubmit={handleSubmit}>
         <section className="panel language-bar" aria-label="语言设置">
-          <label className="lang-control">
-            <span>源语言</span>
-            <select className="select lang-select" value={sourceLang} onChange={(event) => setSourceLang(event.target.value)}>
-              {languageOptions.map((option) => (
-                <option value={option.value} key={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <AppSelect label="源语言" className="lang-control" buttonClassName="lang-select" value={sourceLang} options={languageOptions} onChange={setSourceLang} />
           <button className="button icon language-swap" type="button" onClick={swapLanguages} title="交换语言">
             <ArrowLeftRight size={18} aria-hidden="true" />
           </button>
-          <label className="lang-control">
-            <span>目标语言</span>
-            <select className="select lang-select" value={targetLang} onChange={(event) => setTargetLang(event.target.value)}>
-              {languageOptions.map((option) => (
-                <option value={option.value} key={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <AppSelect label="目标语言" className="lang-control" buttonClassName="lang-select" value={targetLang} options={languageOptions} onChange={setTargetLang} />
         </section>
 
         <section className="panel translate-pane source-pane">
@@ -227,13 +213,7 @@ export function TranslatePage({ store, setStore }: PageProps) {
               <div className="pane-title">{dictionaryEntry ? dictionaryEntry.headword : "翻译结果与操作"}</div>
             </div>
             <div className="result-toolbar compact">
-              <select className="select provider-select" value={providerId} onChange={(event) => setProviderId(event.target.value)} title="Provider">
-                {providerOptions.map((provider) => (
-                  <option value={provider.id} key={provider.id}>
-                    {provider.name}
-                  </option>
-                ))}
-              </select>
+              <AppSelect className="provider-control" buttonClassName="provider-select" value={activeProviderId} options={providerOptions} onChange={setProviderId} placeholder="选择 Provider" />
               <button className="button icon" type="button" onClick={copyResult} disabled={!resultText} title="复制">
                 <Copy size={16} aria-hidden="true" />
               </button>
@@ -359,6 +339,5 @@ function formatDetection(detection: InputDetection): string {
   if (detection.intent === "empty") {
     return "等待输入";
   }
-  const kind = detection.kind === "word" ? "单词" : detection.kind === "phrase" ? "短语" : "句子";
-  return detection.intent === "lookup" ? `${kind} · 查词优先` : `${kind} · ${detection.sourceLang} → ${detection.targetLang}`;
+  return detection.intent === "lookup" ? "单词 / 查词" : `翻译 · ${detection.sourceLang} → ${detection.targetLang}`;
 }
