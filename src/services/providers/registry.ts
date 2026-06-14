@@ -1,4 +1,5 @@
 import { ApiProvider, AppStore, ProviderPurpose, UserTerm } from "../../types/models";
+import { LibreTranslateProvider } from "./libreTranslateProvider";
 import { MockTranslationProvider } from "./mockTranslationProvider";
 import { MyMemoryTranslationProvider } from "./myMemoryTranslationProvider";
 import { OpenAICompatibleTranslationProvider } from "./openAICompatibleTranslationProvider";
@@ -26,6 +27,9 @@ export function createTranslationProvider(config: ApiProvider): TranslationProvi
   if (config.type === "mymemory") {
     return new MyMemoryTranslationProvider(config);
   }
+  if (config.type === "libretranslate") {
+    return new LibreTranslateProvider(config);
+  }
   if (config.type === "mock") {
     return new MockTranslationProvider();
   }
@@ -36,9 +40,9 @@ export function createTranslationProvider(config: ApiProvider): TranslationProvi
 }
 
 export function getPreferredTranslationProvider(store: AppStore, preferredId?: string): ApiProvider {
-  const enabled = enabledProvidersFor(store, "translate");
+  const enabled = enabledProvidersFor(store, "translate").filter((provider) => provider.type !== "mock");
   const preferred = preferredId ? store.apiProviders.find((provider) => provider.id === preferredId) : undefined;
-  if (preferred?.enabled && preferred.useFor.includes("translate")) {
+  if (preferred?.enabled && preferred.useFor.includes("translate") && preferred.type !== "mock") {
     return preferred;
   }
   return enabled[0] ?? store.apiProviders.find((provider) => provider.type === "mock") ?? store.apiProviders[0];
@@ -61,7 +65,8 @@ export async function translateWithProvider(
     };
   } catch (error) {
     const fallbackProviderConfig =
-      store.apiProviders.find((candidate) => candidate.enabled && candidate.type === "mymemory") ??
+      store.apiProviders.find((candidate) => candidate.enabled && candidate.type === "mymemory" && candidate.id !== providerConfig.id) ??
+      store.apiProviders.find((candidate) => candidate.enabled && candidate.type === "libretranslate" && candidate.id !== providerConfig.id) ??
       store.apiProviders.find((candidate) => candidate.type === "mock");
 
     if (!fallbackProviderConfig || fallbackProviderConfig.id === providerConfig.id) {
