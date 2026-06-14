@@ -4,6 +4,7 @@ import {
   DictionaryEntry,
   DictionaryImport,
   DictionarySource,
+  RecentLookup,
   TranslationResult,
   UserDictionary,
   UserTerm,
@@ -132,6 +133,7 @@ export function createInitialStore(): AppStore {
       }
     ],
     vocabulary: [],
+    recentLookups: [],
     glossary: [
       {
         id: "term_local_first",
@@ -163,19 +165,7 @@ export function loadStore(): AppStore {
 
   try {
     const parsed = JSON.parse(raw) as Partial<AppStore>;
-    return {
-      ...fallback,
-      ...parsed,
-      settings: { ...fallback.settings, ...parsed.settings },
-      apiProviders: mergeDefaultProviders(parsed.apiProviders, fallback.apiProviders),
-      vocabulary: parsed.vocabulary ?? [],
-      glossary: parsed.glossary ?? fallback.glossary,
-      history: parsed.history ?? [],
-      dictionarySources: parsed.dictionarySources ?? [],
-      dictionaryImports: parsed.dictionaryImports ?? [],
-      userDictionaries: parsed.userDictionaries ?? [],
-      dictionaryEntries: parsed.dictionaryEntries ?? []
-    };
+    return normalizeStore(parsed, fallback);
   } catch {
     return fallback;
   }
@@ -183,6 +173,13 @@ export function loadStore(): AppStore {
 
 export function saveStore(store: AppStore): void {
   localStorage.setItem(STORE_KEY, JSON.stringify(store));
+}
+
+export function importStoreBackup(raw: string): AppStore {
+  const parsed = JSON.parse(raw) as Partial<AppStore>;
+  const imported = normalizeStore(parsed, createInitialStore());
+  saveStore(imported);
+  return imported;
 }
 
 export function addHistory(store: AppStore, item: Omit<TranslationResult, "id" | "createdAt">): AppStore {
@@ -194,6 +191,23 @@ export function addHistory(store: AppStore, item: Omit<TranslationResult, "id" |
   return {
     ...store,
     history: [historyItem, ...store.history].slice(0, 500)
+  };
+}
+
+export function addRecentLookup(store: AppStore, item: Omit<RecentLookup, "id" | "createdAt">): AppStore {
+  const normalized = item.text.trim();
+  if (!normalized) {
+    return store;
+  }
+  const lookupItem: RecentLookup = {
+    ...item,
+    text: normalized,
+    id: createId("lookup"),
+    createdAt: nowIso()
+  };
+  return {
+    ...store,
+    recentLookups: [lookupItem, ...store.recentLookups.filter((entry) => entry.text.toLocaleLowerCase() !== normalized.toLocaleLowerCase())].slice(0, 40)
   };
 }
 
@@ -251,6 +265,23 @@ export function resetStore(): AppStore {
   const next = createInitialStore();
   saveStore(next);
   return next;
+}
+
+function normalizeStore(parsed: Partial<AppStore>, fallback: AppStore): AppStore {
+  return {
+    ...fallback,
+    ...parsed,
+    settings: { ...fallback.settings, ...parsed.settings },
+    apiProviders: mergeDefaultProviders(parsed.apiProviders, fallback.apiProviders),
+    vocabulary: parsed.vocabulary ?? [],
+    recentLookups: parsed.recentLookups ?? [],
+    glossary: parsed.glossary ?? fallback.glossary,
+    history: parsed.history ?? [],
+    dictionarySources: parsed.dictionarySources ?? [],
+    dictionaryImports: parsed.dictionaryImports ?? [],
+    userDictionaries: parsed.userDictionaries ?? [],
+    dictionaryEntries: parsed.dictionaryEntries ?? []
+  };
 }
 
 function mergeDefaultProviders(savedProviders: ApiProvider[] | undefined, defaultProviders: ApiProvider[]): ApiProvider[] {
