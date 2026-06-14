@@ -26,14 +26,14 @@ type ProviderForm = {
 
 const emptyProviderForm: ProviderForm = {
   name: "",
-  type: "openai",
+  type: "mymemory",
   baseUrl: "",
   appId: "",
   apiKey: "",
   model: "",
-  language: "en",
+  language: "auto",
   enabled: true,
-  priority: 20,
+  priority: 10,
   defaultTargetLang: "zh",
   useFor: ["translate"]
 };
@@ -52,6 +52,7 @@ const historyOptions: AppSelectOption[] = [
 ];
 
 const providerTypeOptions: AppSelectOption[] = [
+  { value: "mymemory", label: "MyMemory 免费翻译", description: "无需 key，默认内置翻译" },
   { value: "free_dictionary", label: "Free Dictionary", description: "无需 key，查词默认可用" },
   { value: "oxford", label: "Oxford API", description: "官方 API，需要 app_id + app_key" },
   { value: "merriam_webster", label: "Merriam-Webster", description: "官方 API，需要 key" },
@@ -172,8 +173,12 @@ export function SettingsPage({ store, setStore }: PageProps) {
       return;
     }
 
+    if (provider.type === "mymemory") {
+      setTestMessage("MyMemory 免费翻译默认可用；实际可用性受公共服务限额和网络影响。");
+      return;
+    }
     if (provider.type === "mock") {
-      setTestMessage("Mock Provider 可用。");
+      setTestMessage("Mock Provider 可用，但只用于离线兜底。翻译页默认不会再优先使用它。");
       return;
     }
     if (provider.type !== "openai") {
@@ -265,7 +270,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
           <div className="item-head">
             <div>
               <div className="panel-title">{providerForm.id ? "编辑 Provider" : "新增 Provider"}</div>
-              <div className="muted small">选择预设后会自动填入用途、Base URL 和优先级；key 仍需要你自己申请和填写。</div>
+              <div className="muted small">选择预设后会自动填入用途、Base URL 和优先级；官方 key 仍需要你自己申请和填写。</div>
             </div>
             {providerForm.id ? (
               <button className="button" type="button" onClick={() => setProviderForm(emptyProviderForm)}>
@@ -316,7 +321,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
               className="input"
               value={providerForm.baseUrl}
               onChange={(event) => setProviderForm({ ...providerForm, baseUrl: event.target.value })}
-              placeholder="https://api.dictionaryapi.dev/api/v2/entries"
+              placeholder="https://api.mymemory.translated.net/get"
             />
           </div>
           <div className="grid-three">
@@ -348,7 +353,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
                 className="input"
                 value={providerForm.language}
                 onChange={(event) => setProviderForm({ ...providerForm, language: event.target.value })}
-                placeholder="en / en-gb / en-us"
+                placeholder="auto / en / en-gb / en-us"
               />
             </div>
           </div>
@@ -413,7 +418,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
         <div className="panel-header">
           <div>
             <div className="panel-title">Providers</div>
-            <div className="muted small">推荐顺序：本地词典 → Free Dictionary → Oxford/Merriam-Webster → Mock。</div>
+            <div className="muted small">推荐顺序：内置免费翻译 → 本地词典 → Free Dictionary → 官方词典 API。</div>
           </div>
           <span className="chip">{store.apiProviders.length}</span>
         </div>
@@ -467,6 +472,15 @@ export function SettingsPage({ store, setStore }: PageProps) {
 }
 
 function providerPreset(type: ProviderType): Pick<ProviderForm, "name" | "baseUrl" | "language" | "useFor" | "priority"> {
+  if (type === "mymemory") {
+    return {
+      name: "MyMemory Free Translate",
+      baseUrl: "https://api.mymemory.translated.net/get",
+      language: "auto",
+      useFor: ["translate"],
+      priority: 10
+    };
+  }
   if (type === "free_dictionary") {
     return {
       name: "Free Dictionary API",
@@ -507,7 +521,7 @@ function providerPreset(type: ProviderType): Pick<ProviderForm, "name" | "baseUr
     name: `${type} Provider`,
     baseUrl: "",
     language: "auto",
-    useFor: type === "mock" ? ["translate", "dictionary"] : ["translate"],
+    useFor: type === "mock" ? ["dictionary"] : ["translate"],
     priority: 100
   };
 }
