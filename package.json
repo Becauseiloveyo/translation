@@ -14,7 +14,8 @@
     "android:sync": "npm run build && cap sync android",
     "android:open": "cap open android",
     "android:run": "npm run android:sync && cap run android",
-    "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug"
+    "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "android:release": "npm run android:sync && cd android && ./gradlew assembleRelease"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",
