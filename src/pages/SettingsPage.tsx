@@ -58,14 +58,15 @@ const historyOptions: AppSelectOption[] = [
 
 const providerTypeOptions: AppSelectOption[] = [
   { value: "mymemory", label: "MyMemory 免费翻译", description: "无需 key，默认内置翻译" },
+  { value: "libretranslate", label: "LibreTranslate", description: "可配置自建或公共实例" },
+  { value: "openai", label: "OpenAI Compatible", description: "高质量翻译/解释，需要兼容接口 key" },
   { value: "free_dictionary", label: "Free Dictionary", description: "无需 key，查词默认可用" },
   { value: "oxford", label: "Oxford API", description: "官方 API，需要 app_id + app_key" },
   { value: "merriam_webster", label: "Merriam-Webster", description: "官方 API，需要 key" },
-  { value: "openai", label: "OpenAI Compatible", description: "翻译/解释，需要兼容接口 key" },
   { value: "deepl", label: "DeepL", description: "翻译占位" },
   { value: "google", label: "Google", description: "翻译占位" },
   { value: "custom", label: "Custom", description: "自定义 Provider" },
-  { value: "mock", label: "Mock", description: "离线演示兜底" }
+  { value: "mock", label: "Mock", description: "仅调试兜底" }
 ];
 
 const enabledOptions: AppSelectOption[] = [
@@ -182,8 +183,12 @@ export function SettingsPage({ store, setStore }: PageProps) {
       setTestMessage("MyMemory 免费翻译默认可用；实际可用性受公共服务限额和网络影响。");
       return;
     }
+    if (provider.type === "libretranslate") {
+      setTestMessage("LibreTranslate 已支持。公共实例可能限流，推荐后续换成自建实例或填写稳定 base URL。");
+      return;
+    }
     if (provider.type === "mock") {
-      setTestMessage("Mock Provider 可用，但只用于离线兜底。翻译页默认不会再优先使用它。");
+      setTestMessage("Mock Provider 仅用于调试兜底，不建议作为用户可见翻译源。");
       return;
     }
     if (provider.type !== "openai") {
@@ -282,8 +287,8 @@ export function SettingsPage({ store, setStore }: PageProps) {
         <form className="panel pad stack settings-card provider-wizard" onSubmit={saveProvider}>
           <div className="item-head">
             <div>
-              <div className="panel-title">{providerForm.id ? "编辑 Provider" : "新增 Provider"}</div>
-              <div className="muted small">选择预设后会自动填入用途、Base URL 和优先级；官方 key 仍需要你自己申请和填写。</div>
+              <div className="panel-title">高级 Provider</div>
+              <div className="muted small">普通使用不需要配置；只有切换高质量 API 或自建服务时才需要。</div>
             </div>
             {providerForm.id ? (
               <button className="button" type="button" onClick={() => setProviderForm(emptyProviderForm)}>
@@ -312,62 +317,27 @@ export function SettingsPage({ store, setStore }: PageProps) {
           <div className="grid-two">
             <div className="field">
               <label htmlFor="provider-name">名称</label>
-              <input
-                id="provider-name"
-                className="input"
-                value={providerForm.name}
-                onChange={(event) => setProviderForm({ ...providerForm, name: event.target.value })}
-              />
+              <input id="provider-name" className="input" value={providerForm.name} onChange={(event) => setProviderForm({ ...providerForm, name: event.target.value })} />
             </div>
-            <AppSelect
-              label="状态"
-              value={providerForm.enabled ? "true" : "false"}
-              options={enabledOptions}
-              onChange={(value) => setProviderForm({ ...providerForm, enabled: value === "true" })}
-            />
+            <AppSelect label="状态" value={providerForm.enabled ? "true" : "false"} options={enabledOptions} onChange={(value) => setProviderForm({ ...providerForm, enabled: value === "true" })} />
           </div>
 
           <div className="field">
             <label htmlFor="provider-base">Base URL</label>
-            <input
-              id="provider-base"
-              className="input"
-              value={providerForm.baseUrl}
-              onChange={(event) => setProviderForm({ ...providerForm, baseUrl: event.target.value })}
-              placeholder="https://api.mymemory.translated.net/get"
-            />
+            <input id="provider-base" className="input" value={providerForm.baseUrl} onChange={(event) => setProviderForm({ ...providerForm, baseUrl: event.target.value })} placeholder="https://api.mymemory.translated.net/get" />
           </div>
           <div className="grid-three">
             <div className="field">
               <label htmlFor="provider-app-id">App ID</label>
-              <input
-                id="provider-app-id"
-                className="input"
-                value={providerForm.appId}
-                onChange={(event) => setProviderForm({ ...providerForm, appId: event.target.value })}
-                placeholder="Oxford app_id"
-              />
+              <input id="provider-app-id" className="input" value={providerForm.appId} onChange={(event) => setProviderForm({ ...providerForm, appId: event.target.value })} placeholder="Oxford app_id" />
             </div>
             <div className="field">
               <label htmlFor="provider-key">API key / app_key</label>
-              <input
-                id="provider-key"
-                className="input"
-                type="password"
-                value={providerForm.apiKey}
-                onChange={(event) => setProviderForm({ ...providerForm, apiKey: event.target.value })}
-                placeholder={providerForm.id ? "留空保留原 key" : ""}
-              />
+              <input id="provider-key" className="input" type="password" value={providerForm.apiKey} onChange={(event) => setProviderForm({ ...providerForm, apiKey: event.target.value })} placeholder={providerForm.id ? "留空保留原 key" : ""} />
             </div>
             <div className="field">
               <label htmlFor="provider-language">语言</label>
-              <input
-                id="provider-language"
-                className="input"
-                value={providerForm.language}
-                onChange={(event) => setProviderForm({ ...providerForm, language: event.target.value })}
-                placeholder="auto / en / en-gb / en-us"
-              />
+              <input id="provider-language" className="input" value={providerForm.language} onChange={(event) => setProviderForm({ ...providerForm, language: event.target.value })} placeholder="auto / en / en-gb / en-us" />
             </div>
           </div>
           <div className="grid-two">
@@ -377,23 +347,12 @@ export function SettingsPage({ store, setStore }: PageProps) {
             </div>
             <div className="field">
               <label htmlFor="provider-priority">优先级</label>
-              <input
-                id="provider-priority"
-                className="input"
-                type="number"
-                value={providerForm.priority}
-                onChange={(event) => setProviderForm({ ...providerForm, priority: Number(event.target.value) })}
-              />
+              <input id="provider-priority" className="input" type="number" value={providerForm.priority} onChange={(event) => setProviderForm({ ...providerForm, priority: Number(event.target.value) })} />
             </div>
           </div>
           <div className="field">
             <label htmlFor="provider-target">默认翻译目标语言</label>
-            <input
-              id="provider-target"
-              className="input"
-              value={providerForm.defaultTargetLang}
-              onChange={(event) => setProviderForm({ ...providerForm, defaultTargetLang: event.target.value })}
-            />
+            <input id="provider-target" className="input" value={providerForm.defaultTargetLang} onChange={(event) => setProviderForm({ ...providerForm, defaultTargetLang: event.target.value })} />
           </div>
           <div className="stack" style={{ gap: 6 }}>
             <div className="label">用途</div>
@@ -404,9 +363,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
                   type="button"
                   key={purpose}
                   onClick={() => {
-                    const useFor = providerForm.useFor.includes(purpose)
-                      ? providerForm.useFor.filter((item) => item !== purpose)
-                      : [...providerForm.useFor, purpose];
+                    const useFor = providerForm.useFor.includes(purpose) ? providerForm.useFor.filter((item) => item !== purpose) : [...providerForm.useFor, purpose];
                     setProviderForm({ ...providerForm, useFor });
                   }}
                 >
@@ -422,11 +379,11 @@ export function SettingsPage({ store, setStore }: PageProps) {
         </form>
       </div>
 
-      <div className="panel provider-list-panel" style={{ marginTop: 16 }}>
+      <div className="panel provider-list-panel advanced-provider-list" style={{ marginTop: 16 }}>
         <div className="panel-header">
           <div>
             <div className="panel-title">Providers</div>
-            <div className="muted small">推荐顺序：内置免费翻译 → 本地词典 → Free Dictionary → 官方词典 API。</div>
+            <div className="muted small">默认用 MyMemory；高质量翻译可配置 OpenAI Compatible；LibreTranslate 适合自建或公共实例。</div>
           </div>
           <span className="chip">{store.apiProviders.length}</span>
         </div>
@@ -475,13 +432,10 @@ export function SettingsPage({ store, setStore }: PageProps) {
 
 function providerPreset(type: ProviderType): Pick<ProviderForm, "name" | "baseUrl" | "language" | "useFor" | "priority"> {
   if (type === "mymemory") {
-    return {
-      name: "MyMemory Free Translate",
-      baseUrl: "https://api.mymemory.translated.net/get",
-      language: "auto",
-      useFor: ["translate"],
-      priority: 10
-    };
+    return { name: "MyMemory Free Translate", baseUrl: "https://api.mymemory.translated.net/get", language: "auto", useFor: ["translate"], priority: 10 };
+  }
+  if (type === "libretranslate") {
+    return { name: "LibreTranslate", baseUrl: "https://libretranslate.com/translate", language: "auto", useFor: ["translate"], priority: 15 };
   }
   if (type === "free_dictionary") {
     return { name: "Free Dictionary API", baseUrl: "https://api.dictionaryapi.dev/api/v2/entries", language: "en", useFor: ["dictionary"], priority: 20 };
