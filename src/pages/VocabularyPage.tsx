@@ -42,11 +42,12 @@ export function VocabularyPage({ store, setStore }: PageProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterValue>("all");
   const [form, setForm] = useState<VocabularyForm>(emptyForm);
+  const today = useMemo(() => new Date(), []);
 
   const stats = useMemo(
     () => ({
       total: store.vocabulary.length,
-      new: store.vocabulary.filter((item) => item.status === "new").length,
+      due: store.vocabulary.filter((item) => isDue(item)).length,
       learning: store.vocabulary.filter((item) => item.status === "learning").length,
       mastered: store.vocabulary.filter((item) => item.status === "mastered").length
     }),
@@ -63,10 +64,10 @@ export function VocabularyPage({ store, setStore }: PageProps) {
     });
   }, [filter, query, store.vocabulary]);
 
-  const studyItem = useMemo(
-    () => store.vocabulary.find((item) => item.status === "learning") ?? store.vocabulary.find((item) => item.status === "new") ?? store.vocabulary[0],
-    [store.vocabulary]
-  );
+  const studyItem = useMemo(() => {
+    const sorted = [...store.vocabulary].sort((a, b) => reviewTime(a) - reviewTime(b));
+    return sorted.find((item) => isDue(item)) ?? sorted.find((item) => item.status !== "mastered") ?? sorted[0];
+  }, [store.vocabulary]);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -82,6 +83,10 @@ export function VocabularyPage({ store, setStore }: PageProps) {
       translation: form.translation.trim() || undefined,
       note: form.note.trim() || undefined,
       status: form.status,
+      reviewCount: existing?.reviewCount ?? 0,
+      masteredCount: existing?.masteredCount ?? 0,
+      lastReviewedAt: existing?.lastReviewedAt,
+      nextReviewAt: existing?.nextReviewAt ?? now,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
     };
@@ -100,6 +105,25 @@ export function VocabularyPage({ store, setStore }: PageProps) {
     );
   }
 
+  function reviewItem(item: VocabularyItem, remembered: boolean) {
+    const now = new Date();
+    const nextMasteredCount = remembered ? (item.masteredCount ?? 0) + 1 : 0;
+    const nextReviewAt = remembered ? addDays(now, nextIntervalDays(nextMasteredCount)) : addHours(now, 6);
+    const nextStatus: VocabularyStatus = remembered ? (nextMasteredCount >= 3 ? "mastered" : "learning") : "learning";
+
+    setStore((current) =>
+      upsertVocabulary(current, {
+        ...item,
+        status: nextStatus,
+        reviewCount: (item.reviewCount ?? 0) + 1,
+        masteredCount: nextMasteredCount,
+        lastReviewedAt: now.toISOString(),
+        nextReviewAt: nextReviewAt.toISOString(),
+        updatedAt: now.toISOString()
+      })
+    );
+  }
+
   function remove(id: string) {
     setStore((current) => ({
       ...current,
@@ -109,8 +133,17 @@ export function VocabularyPage({ store, setStore }: PageProps) {
 
   function exportCsv() {
     const rows = [
-      ["word", "translation", "note", "status"],
-      ...store.vocabulary.map((item) => [item.word, item.translation ?? "", item.note ?? "", item.status])
+      ["word", "translation", "note", "status", "reviewCount", "masteredCount", "lastReviewedAt", "nextReviewAt"],
+      ...store.vocabulary.map((item) => [
+        item.word,
+        item.translation ?? "",
+        item.note ?? "",
+        item.status,
+        String(item.reviewCount ?? 0),
+        String(item.masteredCount ?? 0),
+        item.lastReviewedAt ?? "",
+        item.nextReviewAt ?? ""
+      ])
     ];
     downloadTextFile("litedict-vocabulary.csv", rows.map((row) => row.map(escapeCsv).join(",")).join("\n"), "text/csv;charset=utf-8");
   }
@@ -138,6 +171,10 @@ export function VocabularyPage({ store, setStore }: PageProps) {
           translation: row.translation || undefined,
           note: row.note || undefined,
           status,
+          reviewCount: Number(row.reviewCount || 0),
+          masteredCount: Number(row.masteredCount || 0),
+          lastReviewedAt: row.lastReviewedAt || undefined,
+          nextReviewAt: row.nextReviewAt || now,
           createdAt: now,
           updatedAt: now
         }
@@ -170,35 +207,40 @@ export function VocabularyPage({ store, setStore }: PageProps) {
 
       <section className="metric-grid">
         <MiniStat label="全部" value={stats.total} />
-        <MiniStat label="新词" value={stats.new} />
+        <MiniStat label="今日" value={stats.due} />
         <MiniStat label="学习中" value={stats.learning} />
         <MiniStat label="已掌握" value={stats.mastered} />
       </section>
 
       <div className="grid-two vocabulary-grid">
-        <section className="panel pad stack">
+        <section className="panel pad stack review-panel">
           <div className="item-head">
             <div>
-              <div className="panel-title">学习卡</div>
-              <div className="muted small">优先展示学习中和新词</div>
+              <div className="panel-title">今日复习</div>
+              <div className="muted small">认识会推迟复习；不认识会更快再出现。</div>
             </div>
-            <span className="chip good">{studyItem ? statusLabels[studyItem.status] : "空"}</span>
+            <span className={studyItem && isDue(studyItem) ? "chip good" : "chip"}>{studyItem ? statusLabels[studyItem.status] : "空"}</span>
           </div>
           {studyItem ? (
             <div className="study-card">
               <div>
                 <div className="word-title">{studyItem.word}</div>
                 <div className="study-translation">{studyItem.translation || "还没有释义"}</div>
+                <div className="review-meta">
+                  <span>复习 {studyItem.reviewCount ?? 0} 次</span>
+                  <span>连续认识 {studyItem.masteredCount ?? 0} 次</span>
+                  <span>{formatReviewDue(studyItem, today)}</span>
+                </div>
                 {studyItem.note ? <p className="muted">{studyItem.note}</p> : null}
               </div>
-              <div className="study-card-actions">
-                <button className="button" type="button" onClick={() => updateStatus(studyItem, "learning")}>
+              <div className="study-card-actions review-actions">
+                <button className="button" type="button" onClick={() => reviewItem(studyItem, false)}>
                   <RotateCcw size={16} aria-hidden="true" />
-                  学习中
+                  不认识
                 </button>
-                <button className="button primary" type="button" onClick={() => updateStatus(studyItem, "mastered")}>
+                <button className="button primary" type="button" onClick={() => reviewItem(studyItem, true)}>
                   <CheckCircle2 size={16} aria-hidden="true" />
-                  已掌握
+                  认识
                 </button>
               </div>
             </div>
@@ -287,6 +329,7 @@ export function VocabularyPage({ store, setStore }: PageProps) {
                   </button>
                   <div className="row">
                     <span className="chip">{statusLabels[item.status]}</span>
+                    <span className="chip">{formatReviewDue(item, today)}</span>
                     <button className="button icon" type="button" onClick={() => updateStatus(item, "new")} title="重置为新词">
                       <RotateCcw size={16} aria-hidden="true" />
                     </button>
@@ -326,6 +369,60 @@ function toForm(item: VocabularyItem): VocabularyForm {
     note: item.note ?? "",
     status: item.status
   };
+}
+
+function isDue(item: VocabularyItem): boolean {
+  if (!item.nextReviewAt) {
+    return item.status !== "mastered";
+  }
+  return new Date(item.nextReviewAt).getTime() <= Date.now();
+}
+
+function reviewTime(item: VocabularyItem): number {
+  if (!item.nextReviewAt) {
+    return 0;
+  }
+  return new Date(item.nextReviewAt).getTime();
+}
+
+function nextIntervalDays(masteredCount: number): number {
+  if (masteredCount <= 1) {
+    return 1;
+  }
+  if (masteredCount === 2) {
+    return 3;
+  }
+  if (masteredCount === 3) {
+    return 7;
+  }
+  return 14;
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+function addHours(date: Date, hours: number): Date {
+  return new Date(date.getTime() + hours * 60 * 60 * 1000);
+}
+
+function formatReviewDue(item: VocabularyItem, today: Date): string {
+  if (!item.nextReviewAt) {
+    return item.status === "mastered" ? "已掌握" : "今天复习";
+  }
+  const target = new Date(item.nextReviewAt);
+  const diffDays = Math.ceil((startOfDay(target).getTime() - startOfDay(today).getTime()) / (24 * 60 * 60 * 1000));
+  if (diffDays <= 0) {
+    return "今天复习";
+  }
+  if (diffDays === 1) {
+    return "明天复习";
+  }
+  return `${diffDays} 天后`;
+}
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 function splitCsvLine(line: string): string[] {
