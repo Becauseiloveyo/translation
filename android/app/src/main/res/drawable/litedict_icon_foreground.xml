@@ -5,38 +5,17 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Quiet back sheet: gives the icon the layered translation-card feel without clutter. -->
-    <path
-        android:fillColor="#BFDBFE"
-        android:fillAlpha="0.46"
-        android:pathData="M30,32C30,27.6 33.6,24 38,24h30c4.4,0 8,3.6 8,8v36c0,4.4 -3.6,8 -8,8H38c-4.4,0 -8,-3.6 -8,-8V32z" />
-
-    <!-- Main dictionary card. -->
+    <!-- Minimal LiteDict monogram. One strong mark, one small accent. -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M36,26C36,21.6 39.6,18 44,18h28c4.4,0 8,3.6 8,8v48c0,4.4 -3.6,8 -8,8H44c-4.4,0 -8,-3.6 -8,-8V26z" />
+        android:pathData="M34,25C34,22.8 35.8,21 38,21h8c2.2,0 4,1.8 4,4v45h28c2.2,0 4,1.8 4,4v8c0,2.2 -1.8,4 -4,4H38c-2.2,0 -4,-1.8 -4,-4V25z" />
 
-    <!-- Soft folded corner / accent. -->
-    <path
-        android:fillColor="#67E8F9"
-        android:pathData="M64,18h8c4.4,0 8,3.6 8,8v8H70c-3.3,0 -6,-2.7 -6,-6V18z" />
-
-    <!-- Minimal A mark: enough to signal language, less noisy than the old chain/plus icon. -->
-    <path
-        android:fillColor="#1D4ED8"
-        android:pathData="M46,63l8.2,-25h7.6L70,63h-6.9l-1.5,-5.2h-7.3L52.8,63H46zM55.8,52.7h4.3l-2.1,-7.6L55.8,52.7z" />
-
-    <!-- Dictionary text lines. -->
     <path
         android:fillColor="#93C5FD"
-        android:pathData="M48,68h20c1.4,0 2.5,1.1 2.5,2.5S69.4,73 68,73H48c-1.4,0 -2.5,-1.1 -2.5,-2.5S46.6,68 48,68z" />
+        android:fillAlpha="0.72"
+        android:pathData="M58,22C58,19.8 59.8,18 62,18h19c2.2,0 4,1.8 4,4v7c0,2.2 -1.8,4 -4,4H62c-2.2,0 -4,-1.8 -4,-4V22z" />
 
     <path
-        android:fillColor="#DBEAFE"
-        android:pathData="M51,76h14c1.2,0 2.2,1 2.2,2.2s-1,2.2 -2.2,2.2H51c-1.2,0 -2.2,-1 -2.2,-2.2s1,-2.2 2.2,-2.2z" />
-
-    <!-- Small translation dot accent. -->
-    <path
-        android:fillColor="#14B8A6"
-        android:pathData="M77,76m-5,0a5,5 0,1 0,10 0a5,5 0,1 0,-10 0" />
+        android:fillColor="#2DD4BF"
+        android:pathData="M76,39m-7,0a7,7 0,1 0,14 0a7,7 0,1 0,-14 0" />
 </vector>
