@@ -1,5 +1,6 @@
 import { ApiProvider, AppStore, ProviderPurpose, UserTerm } from "../../types/models";
 import { MockTranslationProvider } from "./mockTranslationProvider";
+import { MyMemoryTranslationProvider } from "./myMemoryTranslationProvider";
 import { OpenAICompatibleTranslationProvider } from "./openAICompatibleTranslationProvider";
 import { PlaceholderTranslationProvider } from "./placeholders";
 import { TranslateInput, TranslationProvider } from "./types";
@@ -22,6 +23,9 @@ export function enabledProvidersFor(store: AppStore, purpose: ProviderPurpose): 
 }
 
 export function createTranslationProvider(config: ApiProvider): TranslationProvider {
+  if (config.type === "mymemory") {
+    return new MyMemoryTranslationProvider(config);
+  }
   if (config.type === "mock") {
     return new MockTranslationProvider();
   }
@@ -56,20 +60,19 @@ export async function translateWithProvider(
       fallbackError: undefined as string | undefined
     };
   } catch (error) {
-    if (providerConfig.type === "mock") {
+    const fallbackProviderConfig =
+      store.apiProviders.find((candidate) => candidate.enabled && candidate.type === "mymemory") ??
+      store.apiProviders.find((candidate) => candidate.type === "mock");
+
+    if (!fallbackProviderConfig || fallbackProviderConfig.id === providerConfig.id) {
       throw error;
     }
 
-    const mockProviderConfig = store.apiProviders.find((candidate) => candidate.type === "mock");
-    if (!mockProviderConfig) {
-      throw error;
-    }
-
-    const mockProvider = createTranslationProvider(mockProviderConfig);
+    const fallbackProvider = createTranslationProvider(fallbackProviderConfig);
     return {
-      output: await mockProvider.translate({ ...input, glossary }),
+      output: await fallbackProvider.translate({ ...input, glossary }),
       matchedTerms: glossary,
-      providerConfig: mockProviderConfig,
+      providerConfig: fallbackProviderConfig,
       fallbackError: (error as Error).message
     };
   }
