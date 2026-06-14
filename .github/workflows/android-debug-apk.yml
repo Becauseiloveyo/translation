@@ -1,4 +1,5 @@
 name: Build Android Debug APK
+run-name: Build Android Debug APK @ ${{ github.sha }}
 
 on:
   workflow_dispatch:
