@@ -1,14 +1,4 @@
-import {
-  BookOpen,
-  Clock,
-  DatabaseZap,
-  Home,
-  Languages,
-  Library,
-  Settings,
-  Sparkles,
-  Star
-} from "lucide-react";
+import { BookOpen, Clock, DatabaseZap, Home, Languages, Library, Settings, Sparkles, Star } from "lucide-react";
 import { ReactNode } from "react";
 
 export type PageKey = "home" | "translate" | "dictionary" | "vocabulary" | "glossary" | "sources" | "history" | "settings";
@@ -21,22 +11,18 @@ type NavItem = {
   group: "home" | "core" | "study" | "advanced" | "system";
 };
 
-type ViewTransitionDocument = Document & {
-  startViewTransition?: (callback: () => void) => { finished: Promise<void> };
-};
-
 const navItems: NavItem[] = [
   { id: "home", label: "首页", icon: Home, group: "home" },
   { id: "dictionary", label: "查词", icon: BookOpen, group: "core" },
   { id: "translate", label: "翻译", icon: Languages, group: "core" },
   { id: "vocabulary", label: "词汇本", shortLabel: "词汇", icon: Star, group: "study" },
+  { id: "history", label: "历史", icon: Clock, group: "study" },
   { id: "glossary", label: "术语表", shortLabel: "术语", icon: Sparkles, group: "advanced" },
-  { id: "history", label: "历史", icon: Clock, group: "advanced" },
   { id: "sources", label: "词典来源", shortLabel: "来源", icon: DatabaseZap, group: "advanced" },
   { id: "settings", label: "我的", icon: Settings, group: "system" }
 ];
 
-const mobileNav = navItems.filter((item) => ["home", "dictionary", "translate", "vocabulary", "settings"].includes(item.id));
+const mobileNav = navItems.filter((item) => ["dictionary", "translate", "vocabulary", "history"].includes(item.id));
 
 type AppShellProps = {
   currentPage: PageKey;
@@ -51,18 +37,13 @@ export function AppShell({ currentPage, onPageChange, children }: AppShellProps)
     if (page === currentPage) {
       return;
     }
-    const transitionDocument = document as ViewTransitionDocument;
-    if (transitionDocument.startViewTransition) {
-      transitionDocument.startViewTransition(() => onPageChange(page));
-      return;
-    }
     onPageChange(page);
   }
 
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="桌面导航">
-        <button className="brand" type="button" onClick={() => navigate("home")}>
+        <button className="brand" type="button" onClick={() => navigate("dictionary")}>
           <div className="brand-mark">
             <Library size={20} aria-hidden="true" />
           </div>
@@ -83,6 +64,9 @@ export function AppShell({ currentPage, onPageChange, children }: AppShellProps)
           <div className="mobile-brand">LiteDict</div>
           <div className="mobile-title">{title}</div>
         </div>
+        <button className="mobile-settings-button" type="button" onClick={() => navigate("settings")} aria-label="设置">
+          <Settings size={20} aria-hidden="true" />
+        </button>
       </div>
 
       <main className="main-content">{children}</main>
