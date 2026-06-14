@@ -6,7 +6,7 @@ import { PageHeader } from "../components/PageHeader";
 import { createDictionaryProvider, canUseRemoteDictionaryProvider } from "../services/dictionary/remoteDictionaryProviders";
 import { resetStore, upsertProvider } from "../services/storage/localStore";
 import { PageProps } from "../types/app";
-import { ApiProvider, AppSettings, ProviderPurpose, ProviderType } from "../types/models";
+import { ApiProvider, AppSettings, FontMode, ProviderPurpose, ProviderType } from "../types/models";
 import { createId, nowIso } from "../utils/id";
 
 type ProviderForm = {
@@ -44,6 +44,11 @@ const themeOptions: AppSelectOption[] = [
   { value: "system", label: "跟随系统", description: "推荐" },
   { value: "light", label: "浅色" },
   { value: "dark", label: "深色" }
+];
+
+const fontOptions: AppSelectOption[] = [
+  { value: "default", label: "默认字体", description: "更接近普通应用，避免手写体" },
+  { value: "system", label: "跟随系统字体", description: "使用手机系统字体设置" }
 ];
 
 const historyOptions: AppSelectOption[] = [
@@ -218,7 +223,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
         <div className="panel pad stack settings-card">
           <div>
             <div className="panel-title">偏好</div>
-            <div className="muted small">查词优先，翻译作为辅助能力。</div>
+            <div className="muted small">字体可以固定为应用默认，也可以跟随系统字体。</div>
           </div>
           <div className="grid-two">
             <AppSelect
@@ -228,11 +233,28 @@ export function SettingsPage({ store, setStore }: PageProps) {
               onChange={(value) => updateSetting("theme", value as AppSettings["theme"])}
             />
             <AppSelect
+              label="字体"
+              value={store.settings.fontMode}
+              options={fontOptions}
+              onChange={(value) => updateSetting("fontMode", value as FontMode)}
+            />
+          </div>
+          <div className="grid-two">
+            <AppSelect
               label="历史"
               value={store.settings.autoSaveHistory ? "true" : "false"}
               options={historyOptions}
               onChange={(value) => updateSetting("autoSaveHistory", value === "true")}
             />
+            <div className="field">
+              <label htmlFor="local-folder">本地词典文件夹</label>
+              <input
+                id="local-folder"
+                className="input"
+                value={store.settings.localDictionaryFolder}
+                onChange={(event) => updateSetting("localDictionaryFolder", event.target.value)}
+              />
+            </div>
           </div>
           <div className="grid-two">
             <div className="field">
@@ -253,15 +275,6 @@ export function SettingsPage({ store, setStore }: PageProps) {
                 onChange={(event) => updateSetting("defaultTargetLang", event.target.value)}
               />
             </div>
-          </div>
-          <div className="field">
-            <label htmlFor="local-folder">本地词典文件夹</label>
-            <input
-              id="local-folder"
-              className="input"
-              value={store.settings.localDictionaryFolder}
-              onChange={(event) => updateSetting("localDictionaryFolder", event.target.value)}
-            />
           </div>
           <div className="notice">API key 当前仅写入本地应用数据。不要把自己的 key 提交到公开仓库。</div>
         </div>
@@ -360,12 +373,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
           <div className="grid-two">
             <div className="field">
               <label htmlFor="provider-model">Model</label>
-              <input
-                id="provider-model"
-                className="input"
-                value={providerForm.model}
-                onChange={(event) => setProviderForm({ ...providerForm, model: event.target.value })}
-              />
+              <input id="provider-model" className="input" value={providerForm.model} onChange={(event) => setProviderForm({ ...providerForm, model: event.target.value })} />
             </div>
             <div className="field">
               <label htmlFor="provider-priority">优先级</label>
@@ -447,13 +455,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
                       <PlugZap size={16} aria-hidden="true" />
                       测试
                     </button>
-                    <button
-                      className="button icon danger"
-                      type="button"
-                      onClick={() => deleteProvider(provider.id)}
-                      disabled={provider.id === "provider_mock"}
-                      title="删除"
-                    >
+                    <button className="button icon danger" type="button" onClick={() => deleteProvider(provider.id)} disabled={provider.id === "provider_mock"} title="删除">
                       <Trash2 size={16} aria-hidden="true" />
                     </button>
                   </div>
@@ -482,40 +484,16 @@ function providerPreset(type: ProviderType): Pick<ProviderForm, "name" | "baseUr
     };
   }
   if (type === "free_dictionary") {
-    return {
-      name: "Free Dictionary API",
-      baseUrl: "https://api.dictionaryapi.dev/api/v2/entries",
-      language: "en",
-      useFor: ["dictionary"],
-      priority: 20
-    };
+    return { name: "Free Dictionary API", baseUrl: "https://api.dictionaryapi.dev/api/v2/entries", language: "en", useFor: ["dictionary"], priority: 20 };
   }
   if (type === "oxford") {
-    return {
-      name: "Oxford Dictionaries API",
-      baseUrl: "https://od-api.oxforddictionaries.com/api/v2",
-      language: "en-gb",
-      useFor: ["dictionary"],
-      priority: 30
-    };
+    return { name: "Oxford Dictionaries API", baseUrl: "https://od-api.oxforddictionaries.com/api/v2", language: "en-gb", useFor: ["dictionary"], priority: 30 };
   }
   if (type === "merriam_webster") {
-    return {
-      name: "Merriam-Webster Collegiate",
-      baseUrl: "https://www.dictionaryapi.com/api/v3/references/collegiate/json",
-      language: "en",
-      useFor: ["dictionary"],
-      priority: 40
-    };
+    return { name: "Merriam-Webster Collegiate", baseUrl: "https://www.dictionaryapi.com/api/v3/references/collegiate/json", language: "en", useFor: ["dictionary"], priority: 40 };
   }
   if (type === "openai") {
-    return {
-      name: "OpenAI Compatible",
-      baseUrl: "https://api.example.invalid/v1",
-      language: "auto",
-      useFor: ["translate", "explain"],
-      priority: 10
-    };
+    return { name: "OpenAI Compatible", baseUrl: "https://api.example.invalid/v1", language: "auto", useFor: ["translate", "explain"], priority: 10 };
   }
   return {
     name: `${type} Provider`,
