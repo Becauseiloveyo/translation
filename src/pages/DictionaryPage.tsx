@@ -39,6 +39,10 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
     setIsLoading(true);
     try {
       const result = await lookupDictionary(store, trimmed);
+      if (!result) {
+        setError("没有找到这个单词。可以检查拼写，或换成原形再查。");
+        return;
+      }
       setEntry(result);
       setStore((current) => addRecentLookup(current, { text: result.headword, kind: "word" }));
     } catch (caught) {
