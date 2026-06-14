@@ -1,5 +1,6 @@
 import { CheckCircle2, DownloadCloud, FolderSearch, Save, Upload } from "lucide-react";
 import { ChangeEvent, useMemo, useState } from "react";
+import { AppSelect } from "../components/AppSelect";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/PageHeader";
 import {
@@ -387,17 +388,6 @@ function MappingSelect({
   fields: string[];
   onChange: (value: string | undefined) => void;
 }) {
-  return (
-    <div className="field">
-      <label>{label}</label>
-      <select className="select" value={value ?? ""} onChange={(event) => onChange(event.target.value || undefined)}>
-        <option value="">不映射</option>
-        {fields.map((field) => (
-          <option value={field} key={field}>
-            {field}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
+  const options = [{ value: "", label: "不映射" }, ...fields.map((field) => ({ value: field, label: field }))];
+  return <AppSelect label={label} value={value ?? ""} options={options} onChange={(nextValue) => onChange(nextValue || undefined)} />;
 }
