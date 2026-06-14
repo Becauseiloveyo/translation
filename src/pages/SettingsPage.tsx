@@ -1,13 +1,14 @@
-import { PlugZap, Plus, Save, Trash2 } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { Download, PlugZap, Plus, Save, Trash2, Upload } from "lucide-react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { AppSelect, AppSelectOption } from "../components/AppSelect";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/PageHeader";
 import { createDictionaryProvider, canUseRemoteDictionaryProvider } from "../services/dictionary/remoteDictionaryProviders";
-import { resetStore, upsertProvider } from "../services/storage/localStore";
+import { importStoreBackup, resetStore, upsertProvider } from "../services/storage/localStore";
 import { PageProps } from "../types/app";
 import { ApiProvider, AppSettings, FontMode, ProviderPurpose, ProviderType } from "../types/models";
 import { createId, nowIso } from "../utils/id";
+import { downloadTextFile } from "../utils/text";
 
 type ProviderForm = {
   id?: string;
@@ -77,11 +78,16 @@ const enabledOptions: AppSelectOption[] = [
 export function SettingsPage({ store, setStore }: PageProps) {
   const [providerForm, setProviderForm] = useState<ProviderForm>(emptyProviderForm);
   const [testMessage, setTestMessage] = useState("");
+  const [backupMessage, setBackupMessage] = useState("");
+  const [showAdvancedProviders, setShowAdvancedProviders] = useState(false);
 
   const sortedProviders = useMemo(
     () => [...store.apiProviders].sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name)),
     [store.apiProviders]
   );
+
+  const enabledTranslateProvider = sortedProviders.find((provider) => provider.enabled && provider.useFor.includes("translate") && provider.type !== "mock");
+  const enabledDictionaryProvider = sortedProviders.find((provider) => provider.enabled && provider.useFor.includes("dictionary") && provider.type !== "mock");
 
   function updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]) {
     setStore((current) => ({
@@ -91,6 +97,30 @@ export function SettingsPage({ store, setStore }: PageProps) {
         [key]: value
       }
     }));
+  }
+
+  function exportBackup() {
+    const exportedAt = new Date().toISOString();
+    const backup = JSON.stringify({ ...store, exportedAt, app: "LiteDict" }, null, 2);
+    downloadTextFile(`litedict-backup-${exportedAt.slice(0, 10)}.json`, backup, "application/json;charset=utf-8");
+    setBackupMessage("完整备份已导出。它包含设置、Provider、词汇本、历史、词典数据。请妥善保存。 ");
+  }
+
+  async function importBackup(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      const text = await file.text();
+      const next = importStoreBackup(text);
+      setStore(next);
+      setBackupMessage("备份已恢复。当前页面数据已经替换为导入内容。 ");
+    } catch {
+      setBackupMessage("备份恢复失败。请确认选择的是 LiteDict 导出的 JSON 文件。 ");
+    } finally {
+      event.target.value = "";
+    }
   }
 
   function applyProviderType(typeValue: string) {
@@ -150,6 +180,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
       defaultTargetLang: provider.defaultTargetLang ?? "",
       useFor: provider.useFor
     });
+    setShowAdvancedProviders(true);
     setTestMessage("");
   }
 
@@ -174,7 +205,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
         const entry = await createDictionaryProvider(provider).lookup({ text: "hello", sourceLang: provider.language ?? "en" });
         setTestMessage(entry ? `${provider.name} 查词测试成功：${entry.headword}` : `${provider.name} 未返回 hello 词条。`);
       } catch (caught) {
-        setTestMessage(`查词测试失败：${(caught as Error).message}`);
+        setTestMessage(`查词测试失败：${toFriendlySettingsError(caught)}`);
       }
       return;
     }
@@ -208,7 +239,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
       });
       setTestMessage(response.ok ? "连接测试成功。" : `连接测试返回 HTTP ${response.status}。`);
     } catch (caught) {
-      setTestMessage(`连接测试失败：${(caught as Error).message}`);
+      setTestMessage(`连接测试失败：${toFriendlySettingsError(caught)}`);
     }
   }
 
@@ -228,7 +259,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
         <div className="panel pad stack settings-card">
           <div>
             <div className="panel-title">偏好</div>
-            <div className="muted small">字体可以固定为应用默认，也可以跟随系统字体。</div>
+            <div className="muted small">日常使用只需要调整主题、字体和历史保存。</div>
           </div>
           <div className="grid-two">
             <AppSelect
@@ -281,152 +312,201 @@ export function SettingsPage({ store, setStore }: PageProps) {
               />
             </div>
           </div>
-          <div className="notice">API key 当前仅写入本地应用数据。不要把自己的 key 提交到公开仓库。</div>
         </div>
 
-        <form className="panel pad stack settings-card provider-wizard" onSubmit={saveProvider}>
-          <div className="item-head">
-            <div>
-              <div className="panel-title">高级 Provider</div>
-              <div className="muted small">普通使用不需要配置；只有切换高质量 API 或自建服务时才需要。</div>
-            </div>
-            {providerForm.id ? (
-              <button className="button" type="button" onClick={() => setProviderForm(emptyProviderForm)}>
-                <Plus size={16} aria-hidden="true" />
-                新增
-              </button>
-            ) : null}
+        <div className="panel pad stack settings-card backup-card">
+          <div>
+            <div className="panel-title">备份与恢复</div>
+            <div className="muted small">完整备份包含词汇本、历史、Provider、设置和导入词典。</div>
           </div>
+          <div className="backup-actions">
+            <button className="button primary" type="button" onClick={exportBackup}>
+              <Download size={16} aria-hidden="true" />
+              导出完整备份
+            </button>
+            <label className="button" htmlFor="settings-backup-import">
+              <Upload size={16} aria-hidden="true" />
+              恢复备份
+            </label>
+            <input id="settings-backup-import" className="hidden-file" type="file" accept=".json,application/json" onChange={importBackup} />
+          </div>
+          {backupMessage ? <div className="notice">{backupMessage}</div> : null}
+          <div className="notice">API key 只保存在本地应用数据和你导出的备份文件中，不要公开分享备份。</div>
+        </div>
+      </div>
 
-          <AppSelect label="Provider 类型" value={providerForm.type} options={providerTypeOptions} onChange={applyProviderType} />
+      <section className="panel pad stack provider-summary-card">
+        <div className="item-head">
+          <div>
+            <div className="panel-title">翻译与词典服务</div>
+            <div className="muted small">默认配置已经可用。高级 Provider 只在需要 API key 或自建服务时打开。</div>
+          </div>
+          <button className="button" type="button" onClick={() => setShowAdvancedProviders((value) => !value)}>
+            {showAdvancedProviders ? "收起高级" : "高级设置"}
+          </button>
+        </div>
+        <div className="provider-status-grid">
+          <ProviderStatus title="翻译" provider={enabledTranslateProvider} fallback="MyMemory 免费翻译" />
+          <ProviderStatus title="查词" provider={enabledDictionaryProvider} fallback="Free Dictionary API" />
+        </div>
+      </section>
 
-          <div className="provider-preset-grid" aria-label="常用预设">
-            {providerTypeOptions.slice(0, 4).map((option) => (
-              <button
-                className={providerForm.type === option.value ? "preset-card active" : "preset-card"}
-                type="button"
-                key={option.value}
-                onClick={() => applyProviderType(option.value)}
-              >
-                <strong>{option.label}</strong>
-                <span>{option.description}</span>
-              </button>
-            ))}
-          </div>
+      {showAdvancedProviders ? (
+        <>
+          <form className="panel pad stack settings-card provider-wizard" onSubmit={saveProvider}>
+            <div className="item-head">
+              <div>
+                <div className="panel-title">高级 Provider</div>
+                <div className="muted small">普通使用不需要配置；只有切换高质量 API 或自建服务时才需要。</div>
+              </div>
+              {providerForm.id ? (
+                <button className="button" type="button" onClick={() => setProviderForm(emptyProviderForm)}>
+                  <Plus size={16} aria-hidden="true" />
+                  新增
+                </button>
+              ) : null}
+            </div>
 
-          <div className="grid-two">
-            <div className="field">
-              <label htmlFor="provider-name">名称</label>
-              <input id="provider-name" className="input" value={providerForm.name} onChange={(event) => setProviderForm({ ...providerForm, name: event.target.value })} />
-            </div>
-            <AppSelect label="状态" value={providerForm.enabled ? "true" : "false"} options={enabledOptions} onChange={(value) => setProviderForm({ ...providerForm, enabled: value === "true" })} />
-          </div>
+            <AppSelect label="Provider 类型" value={providerForm.type} options={providerTypeOptions} onChange={applyProviderType} />
 
-          <div className="field">
-            <label htmlFor="provider-base">Base URL</label>
-            <input id="provider-base" className="input" value={providerForm.baseUrl} onChange={(event) => setProviderForm({ ...providerForm, baseUrl: event.target.value })} placeholder="https://api.mymemory.translated.net/get" />
-          </div>
-          <div className="grid-three">
-            <div className="field">
-              <label htmlFor="provider-app-id">App ID</label>
-              <input id="provider-app-id" className="input" value={providerForm.appId} onChange={(event) => setProviderForm({ ...providerForm, appId: event.target.value })} placeholder="Oxford app_id" />
-            </div>
-            <div className="field">
-              <label htmlFor="provider-key">API key / app_key</label>
-              <input id="provider-key" className="input" type="password" value={providerForm.apiKey} onChange={(event) => setProviderForm({ ...providerForm, apiKey: event.target.value })} placeholder={providerForm.id ? "留空保留原 key" : ""} />
-            </div>
-            <div className="field">
-              <label htmlFor="provider-language">语言</label>
-              <input id="provider-language" className="input" value={providerForm.language} onChange={(event) => setProviderForm({ ...providerForm, language: event.target.value })} placeholder="auto / en / en-gb / en-us" />
-            </div>
-          </div>
-          <div className="grid-two">
-            <div className="field">
-              <label htmlFor="provider-model">Model</label>
-              <input id="provider-model" className="input" value={providerForm.model} onChange={(event) => setProviderForm({ ...providerForm, model: event.target.value })} />
-            </div>
-            <div className="field">
-              <label htmlFor="provider-priority">优先级</label>
-              <input id="provider-priority" className="input" type="number" value={providerForm.priority} onChange={(event) => setProviderForm({ ...providerForm, priority: Number(event.target.value) })} />
-            </div>
-          </div>
-          <div className="field">
-            <label htmlFor="provider-target">默认翻译目标语言</label>
-            <input id="provider-target" className="input" value={providerForm.defaultTargetLang} onChange={(event) => setProviderForm({ ...providerForm, defaultTargetLang: event.target.value })} />
-          </div>
-          <div className="stack" style={{ gap: 6 }}>
-            <div className="label">用途</div>
-            <div className="row purpose-row">
-              {purposes.map((purpose) => (
+            <div className="provider-preset-grid" aria-label="常用预设">
+              {providerTypeOptions.slice(0, 4).map((option) => (
                 <button
-                  className={providerForm.useFor.includes(purpose) ? "chip-button active" : "chip-button"}
+                  className={providerForm.type === option.value ? "preset-card active" : "preset-card"}
                   type="button"
-                  key={purpose}
-                  onClick={() => {
-                    const useFor = providerForm.useFor.includes(purpose) ? providerForm.useFor.filter((item) => item !== purpose) : [...providerForm.useFor, purpose];
-                    setProviderForm({ ...providerForm, useFor });
-                  }}
+                  key={option.value}
+                  onClick={() => applyProviderType(option.value)}
                 >
-                  {purpose}
+                  <strong>{option.label}</strong>
+                  <span>{option.description}</span>
                 </button>
               ))}
             </div>
-          </div>
-          <button className="button primary" type="submit">
-            <Save size={16} aria-hidden="true" />
-            保存 Provider
-          </button>
-        </form>
-      </div>
 
-      <div className="panel provider-list-panel advanced-provider-list" style={{ marginTop: 16 }}>
-        <div className="panel-header">
-          <div>
-            <div className="panel-title">Providers</div>
-            <div className="muted small">默认用 MyMemory；高质量翻译可配置 OpenAI Compatible；LibreTranslate 适合自建或公共实例。</div>
-          </div>
-          <span className="chip">{store.apiProviders.length}</span>
-        </div>
-        {testMessage ? (
-          <div className="pad">
-            <div className="notice">{testMessage}</div>
-          </div>
-        ) : null}
-        {sortedProviders.length ? (
-          <div className="list provider-list">
-            {sortedProviders.map((provider) => (
-              <div className="list-item provider-list-item" key={provider.id}>
-                <div className="item-head">
-                  <button className="link-button" type="button" onClick={() => editProvider(provider)}>
-                    <div className="item-title">{provider.name}</div>
-                    <div className="muted small">
-                      {provider.type} · P{provider.priority} · {provider.useFor.join(", ")}
-                      {provider.language ? ` · ${provider.language}` : ""}
-                      {provider.appId ? " · app_id saved" : ""}
-                      {provider.apiKeyEncrypted ? " · key saved" : ""}
-                    </div>
-                  </button>
-                  <div className="row">
-                    <span className={provider.enabled ? "chip good" : "chip"}>{provider.enabled ? "enabled" : "disabled"}</span>
-                    <button className="button" type="button" onClick={() => void testProvider(provider)}>
-                      <PlugZap size={16} aria-hidden="true" />
-                      测试
-                    </button>
-                    <button className="button icon danger" type="button" onClick={() => deleteProvider(provider.id)} disabled={provider.id === "provider_mock"} title="删除">
-                      <Trash2 size={16} aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
+            <div className="grid-two">
+              <div className="field">
+                <label htmlFor="provider-name">名称</label>
+                <input id="provider-name" className="input" value={providerForm.name} onChange={(event) => setProviderForm({ ...providerForm, name: event.target.value })} />
               </div>
-            ))}
+              <AppSelect label="状态" value={providerForm.enabled ? "true" : "false"} options={enabledOptions} onChange={(value) => setProviderForm({ ...providerForm, enabled: value === "true" })} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="provider-base">Base URL</label>
+              <input id="provider-base" className="input" value={providerForm.baseUrl} onChange={(event) => setProviderForm({ ...providerForm, baseUrl: event.target.value })} placeholder="https://api.mymemory.translated.net/get" />
+            </div>
+            <div className="grid-three">
+              <div className="field">
+                <label htmlFor="provider-app-id">App ID</label>
+                <input id="provider-app-id" className="input" value={providerForm.appId} onChange={(event) => setProviderForm({ ...providerForm, appId: event.target.value })} placeholder="Oxford app_id" />
+              </div>
+              <div className="field">
+                <label htmlFor="provider-key">API key / app_key</label>
+                <input id="provider-key" className="input" type="password" value={providerForm.apiKey} onChange={(event) => setProviderForm({ ...providerForm, apiKey: event.target.value })} placeholder={providerForm.id ? "留空保留原 key" : ""} />
+              </div>
+              <div className="field">
+                <label htmlFor="provider-language">语言</label>
+                <input id="provider-language" className="input" value={providerForm.language} onChange={(event) => setProviderForm({ ...providerForm, language: event.target.value })} placeholder="auto / en / en-gb / en-us" />
+              </div>
+            </div>
+            <div className="grid-two">
+              <div className="field">
+                <label htmlFor="provider-model">Model</label>
+                <input id="provider-model" className="input" value={providerForm.model} onChange={(event) => setProviderForm({ ...providerForm, model: event.target.value })} />
+              </div>
+              <div className="field">
+                <label htmlFor="provider-priority">优先级</label>
+                <input id="provider-priority" className="input" type="number" value={providerForm.priority} onChange={(event) => setProviderForm({ ...providerForm, priority: Number(event.target.value) })} />
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="provider-target">默认翻译目标语言</label>
+              <input id="provider-target" className="input" value={providerForm.defaultTargetLang} onChange={(event) => setProviderForm({ ...providerForm, defaultTargetLang: event.target.value })} />
+            </div>
+            <div className="stack" style={{ gap: 6 }}>
+              <div className="label">用途</div>
+              <div className="row purpose-row">
+                {purposes.map((purpose) => (
+                  <button
+                    className={providerForm.useFor.includes(purpose) ? "chip-button active" : "chip-button"}
+                    type="button"
+                    key={purpose}
+                    onClick={() => {
+                      const useFor = providerForm.useFor.includes(purpose) ? providerForm.useFor.filter((item) => item !== purpose) : [...providerForm.useFor, purpose];
+                      setProviderForm({ ...providerForm, useFor });
+                    }}
+                  >
+                    {purpose}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button className="button primary" type="submit">
+              <Save size={16} aria-hidden="true" />
+              保存 Provider
+            </button>
+          </form>
+
+          <div className="panel provider-list-panel advanced-provider-list" style={{ marginTop: 16 }}>
+            <div className="panel-header">
+              <div>
+                <div className="panel-title">Providers</div>
+                <div className="muted small">默认用 MyMemory；高质量翻译可配置 OpenAI Compatible；LibreTranslate 适合自建或公共实例。</div>
+              </div>
+              <span className="chip">{store.apiProviders.length}</span>
+            </div>
+            {testMessage ? (
+              <div className="pad">
+                <div className="notice">{testMessage}</div>
+              </div>
+            ) : null}
+            {sortedProviders.length ? (
+              <div className="list provider-list">
+                {sortedProviders.map((provider) => (
+                  <div className="list-item provider-list-item" key={provider.id}>
+                    <div className="item-head">
+                      <button className="link-button" type="button" onClick={() => editProvider(provider)}>
+                        <div className="item-title">{provider.name}</div>
+                        <div className="muted small">
+                          {provider.type} · P{provider.priority} · {provider.useFor.join(", ")}
+                          {provider.language ? ` · ${provider.language}` : ""}
+                          {provider.appId ? " · app_id saved" : ""}
+                          {provider.apiKeyEncrypted ? " · key saved" : ""}
+                        </div>
+                      </button>
+                      <div className="row">
+                        <span className={provider.enabled ? "chip good" : "chip"}>{provider.enabled ? "enabled" : "disabled"}</span>
+                        <button className="button" type="button" onClick={() => void testProvider(provider)}>
+                          <PlugZap size={16} aria-hidden="true" />
+                          测试
+                        </button>
+                        <button className="button icon danger" type="button" onClick={() => deleteProvider(provider.id)} disabled={provider.id === "provider_mock"} title="删除">
+                          <Trash2 size={16} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="pad">
+                <EmptyState title="暂无 Provider" />
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="pad">
-            <EmptyState title="暂无 Provider" />
-          </div>
-        )}
-      </div>
+        </>
+      ) : null}
     </section>
+  );
+}
+
+function ProviderStatus({ title, provider, fallback }: { title: string; provider?: ApiProvider; fallback: string }) {
+  return (
+    <div className="provider-status-card">
+      <span>{title}</span>
+      <strong>{provider?.name ?? fallback}</strong>
+      <small>{provider ? `${provider.type} · 已启用` : "默认可用"}</small>
+    </div>
   );
 }
 
@@ -460,4 +540,18 @@ function providerPreset(type: ProviderType): Pick<ProviderForm, "name" | "baseUr
 
 function isDictionaryApiProviderType(type: ProviderType): boolean {
   return type === "free_dictionary" || type === "oxford" || type === "merriam_webster";
+}
+
+function toFriendlySettingsError(caught: unknown): string {
+  const message = caught instanceof Error ? caught.message : String(caught);
+  if (/network|failed to fetch|load failed/i.test(message)) {
+    return "网络连接失败。";
+  }
+  if (/401|403|key|unauthorized|forbidden/i.test(message)) {
+    return "凭据不可用，请检查 API key。";
+  }
+  if (/429|limit|quota|rate/i.test(message)) {
+    return "服务限流或额度不足。";
+  }
+  return message || "测试失败。";
 }
