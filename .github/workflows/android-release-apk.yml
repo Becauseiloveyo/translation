@@ -3,6 +3,24 @@ run-name: Build Android Release APK @ ${{ github.sha }}
 
 on:
   workflow_dispatch:
+    inputs:
+      version_name:
+        description: "Release version name, for example 1.0.1"
+        required: true
+        default: "1.0.1"
+      version_code:
+        description: "Android versionCode. Must be greater than the installed version."
+        required: true
+        default: "2"
+      create_github_release:
+        description: "Create a permanent GitHub Release and upload APK"
+        required: true
+        type: boolean
+        default: true
+      changelog:
+        description: "Optional release notes. Leave empty to use recent commit messages."
+        required: false
+        default: ""
   push:
     branches:
       - main
@@ -22,11 +40,61 @@ jobs:
     name: Build signed release APK
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release metadata
+        id: release-meta
+        env:
+          INPUT_VERSION_NAME: ${{ github.event.inputs.version_name }}
+          INPUT_VERSION_CODE: ${{ github.event.inputs.version_code }}
+          INPUT_CHANGELOG: ${{ github.event.inputs.changelog }}
+        run: |
+          set -euo pipefail
+          VERSION_NAME="${INPUT_VERSION_NAME:-0.1.${GITHUB_RUN_NUMBER}}"
+          VERSION_CODE="${INPUT_VERSION_CODE:-$GITHUB_RUN_NUMBER}"
+          RELEASE_TAG="v${VERSION_NAME}"
+
+          if ! [[ "$VERSION_CODE" =~ ^[0-9]+$ ]]; then
+            echo "version_code must be an integer." >&2
+            exit 1
+          fi
+
+          {
+            echo "VERSION_NAME=$VERSION_NAME"
+            echo "VERSION_CODE=$VERSION_CODE"
+            echo "RELEASE_TAG=$RELEASE_TAG"
+          } >> "$GITHUB_ENV"
+
+          {
+            echo "version_name=$VERSION_NAME"
+            echo "version_code=$VERSION_CODE"
+            echo "release_tag=$RELEASE_TAG"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ -n "${INPUT_CHANGELOG:-}" ]; then
+            printf '%s\n' "$INPUT_CHANGELOG" > release-notes.md
+          else
+            {
+              echo "## LiteDict ${VERSION_NAME}"
+              echo
+              echo "### Changes"
+              git log --pretty=format:'- %s (`%h`)' -n 20
+              echo
+            } > release-notes.md
+          fi
+
+          {
+            echo "## Release metadata"
+            echo "- versionName: $VERSION_NAME"
+            echo "- versionCode: $VERSION_CODE"
+            echo "- tag: $RELEASE_TAG"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -82,7 +150,7 @@ jobs:
         working-directory: android
         run: |
           set +e
-          ./gradlew assembleRelease --stacktrace 2>&1 | tee ../gradle-release.log
+          ./gradlew assembleRelease -PVERSION_CODE="$VERSION_CODE" -PVERSION_NAME="$VERSION_NAME" --stacktrace 2>&1 | tee ../gradle-release.log
           status=${PIPESTATUS[0]}
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
           if [ "$status" -ne 0 ]; then
@@ -113,25 +181,15 @@ jobs:
             KEY_PASS="$ANDROID_KEY_PASSWORD"
             echo "Using fixed signing key from GitHub Secrets." >> "$GITHUB_STEP_SUMMARY"
           else
-            keytool -genkeypair \
-              -keystore signing/litedict-temp-release.jks \
-              -storepass android \
-              -keypass android \
-              -alias litedict \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=LiteDict,O=Personal,C=US"
-            KEYSTORE_PATH="signing/litedict-temp-release.jks"
-            STORE_PASS="android"
-            KEY_ALIAS="litedict"
-            KEY_PASS="android"
-            echo "Using temporary signing key. Add Android signing secrets for stable upgrades." >> "$GITHUB_STEP_SUMMARY"
+            echo "Missing Android signing secrets. Refusing to build release with a temporary key." >&2
+            echo "Missing Android signing secrets. Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi
 
           UNSIGNED_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
-          ALIGNED_APK="artifacts/LiteDict-release-aligned.apk"
+          ALIGNED_APK="artifacts/LiteDict-${VERSION_NAME}-aligned.apk"
           SIGNED_APK="artifacts/LiteDict-release.apk"
+          VERSIONED_APK="artifacts/LiteDict-${VERSION_NAME}.apk"
           BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
 
           "$BUILD_TOOLS/zipalign" -p -f 4 "$UNSIGNED_APK" "$ALIGNED_APK"
@@ -143,13 +201,30 @@ jobs:
             --out "$SIGNED_APK" \
             "$ALIGNED_APK"
           "$BUILD_TOOLS/apksigner" verify --print-certs "$SIGNED_APK"
+          cp "$SIGNED_APK" "$VERSIONED_APK"
 
-      - name: Upload signed release APK
+      - name: Upload signed release APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: LiteDict-release-apk
-          path: artifacts/LiteDict-release.apk
+          path: |
+            artifacts/LiteDict-release.apk
+            artifacts/LiteDict-${{ steps.release-meta.outputs.version_name }}.apk
           if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.create_github_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release-meta.outputs.release_tag }}
+          target_commitish: ${{ github.sha }}
+          name: LiteDict ${{ steps.release-meta.outputs.version_name }}
+          body_path: release-notes.md
+          files: |
+            artifacts/LiteDict-release.apk
+            artifacts/LiteDict-${{ steps.release-meta.outputs.version_name }}.apk
+          draft: false
+          prerelease: false
 
       - name: Upload release build logs
         if: always()
@@ -159,4 +234,5 @@ jobs:
           path: |
             web-sync.log
             gradle-release.log
+            release-notes.md
           if-no-files-found: ignore
