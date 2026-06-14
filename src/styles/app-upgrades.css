@@ -1,0 +1,228 @@
+/* Experience upgrades: app-style translate, review flow, suggestions, backup. */
+.app-translate-page {
+  min-height: 100%;
+}
+
+.translate-app-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.translate-language-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+.translate-language-strip .app-select-trigger,
+.translate-language-strip .language-swap {
+  border: 0 !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  box-shadow: none !important;
+}
+
+.translate-input-card,
+.translate-result-card,
+.translate-bottom-sheet,
+.provider-summary-card,
+.backup-card {
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.80);
+  box-shadow: var(--product-shadow);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+.translate-input-card,
+.translate-result-card {
+  padding: 16px;
+}
+
+.translate-card-topline,
+.translate-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.app-translate-input {
+  min-height: 154px !important;
+  margin: 10px 0 12px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #0f172a;
+  font-size: 21px !important;
+  line-height: 1.55;
+  padding: 4px !important;
+  resize: none;
+}
+
+.app-translate-input::placeholder {
+  color: #94a3b8;
+}
+
+.translate-action-bar,
+.backup-actions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+}
+
+.translate-result-card {
+  min-height: 260px;
+}
+
+.app-result-surface {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.translate-bottom-sheet {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.07);
+}
+
+.subtle-provider .app-select-trigger {
+  min-height: 44px !important;
+  border: 0 !important;
+  background: rgba(241, 245, 249, 0.9) !important;
+}
+
+.suggestion-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.suggestion-row button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.10);
+  color: #1d4ed8;
+  padding: 7px 11px;
+  font-weight: 780;
+}
+
+.review-panel .study-card {
+  background:
+    radial-gradient(circle at 100% 0, rgba(37, 99, 235, 0.13), transparent 180px),
+    rgba(255, 255, 255, 0.86) !important;
+}
+
+.review-meta {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-meta span {
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #475569;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.review-actions .button {
+  min-height: 50px;
+}
+
+.provider-summary-card {
+  margin-top: 16px;
+}
+
+.provider-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.provider-status-card {
+  border-radius: 24px;
+  background: rgba(248, 250, 252, 0.9);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.provider-status-card span,
+.provider-status-card small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.provider-status-card strong {
+  color: #0f172a;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.backup-card .notice {
+  margin-top: 2px;
+}
+
+@media (max-width: 980px) {
+  .translate-app-shell {
+    gap: 12px;
+  }
+
+  .translate-language-strip {
+    border-radius: 26px;
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .app-translate-input {
+    min-height: 128px !important;
+    font-size: 20px !important;
+  }
+
+  .translate-action-bar,
+  .backup-actions,
+  .provider-status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .translate-bottom-sheet {
+    margin-bottom: 4px;
+  }
+}
+
+@media (max-width: 560px) {
+  .translate-input-card,
+  .translate-result-card,
+  .translate-bottom-sheet,
+  .provider-summary-card,
+  .backup-card {
+    border-radius: 26px;
+  }
+
+  .translate-language-strip .lang-control .app-select-label {
+    display: none;
+  }
+}
