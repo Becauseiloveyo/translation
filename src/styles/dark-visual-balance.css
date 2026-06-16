@@ -1,0 +1,234 @@
+/* Dark-mode visual balance: remove abrupt light islands and keep one calm glass layer. */
+.dark {
+  --dark-page: #0d1626;
+  --dark-surface: rgba(19, 29, 47, 0.78);
+  --dark-surface-strong: rgba(25, 37, 58, 0.92);
+  --dark-surface-soft: rgba(31, 45, 68, 0.72);
+  --dark-border: rgba(148, 163, 184, 0.18);
+  --dark-border-strong: rgba(191, 219, 254, 0.24);
+  --dark-text: #edf5ff;
+  --dark-muted: #9fb0c8;
+  --dark-muted-strong: #c8d5e8;
+  --dark-accent: #3b82f6;
+  --dark-accent-soft: rgba(59, 130, 246, 0.18);
+}
+
+.dark body {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(37, 99, 235, 0.16), transparent 270px),
+    radial-gradient(circle at 92% 8%, rgba(20, 184, 166, 0.10), transparent 250px),
+    linear-gradient(180deg, #0c1423 0%, var(--dark-page) 46%, #0a1220 100%) !important;
+}
+
+.dark .mobile-topbar {
+  background: rgba(12, 20, 35, 0.72) !important;
+  border-bottom-color: var(--dark-border) !important;
+  box-shadow: none !important;
+}
+
+.dark .mobile-settings-button {
+  width: 44px !important;
+  height: 44px !important;
+  border: 1px solid var(--dark-border) !important;
+  border-radius: 18px !important;
+  background: rgba(25, 37, 58, 0.74) !important;
+  color: var(--dark-muted-strong) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18) !important;
+  backdrop-filter: blur(16px) saturate(145%);
+}
+
+.dark .mobile-settings-button svg {
+  color: var(--dark-muted-strong) !important;
+  opacity: 0.92;
+}
+
+.dark .bottom-nav {
+  background: rgba(10, 18, 32, 0.82) !important;
+  border: 1px solid var(--dark-border) !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24) !important;
+}
+
+.dark .bottom-nav-item::before {
+  background: rgba(37, 99, 235, 0.20) !important;
+}
+
+.dark .panel,
+.dark .settings-card,
+.dark .backup-card,
+.dark .provider-summary-card,
+.dark .provider-list-panel,
+.dark .dictionary-manager-card,
+.dark .release-preflight-card,
+.dark .lookup-shell,
+.dark .lookup-result-card,
+.dark .translate-input-card,
+.dark .translate-result-card,
+.dark .translate-bottom-sheet,
+.dark .mature-page-hero,
+.dark .review-panel,
+.dark .vocabulary-list-panel {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--dark-border) !important;
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.18) !important;
+  color: var(--dark-text) !important;
+}
+
+.dark .mature-page-hero,
+.dark .translate-language-strip {
+  background:
+    radial-gradient(circle at 86% 0%, rgba(59, 130, 246, 0.12), transparent 160px),
+    var(--dark-surface) !important;
+}
+
+.dark .translate-language-strip {
+  border: 1px solid var(--dark-border) !important;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.16) !important;
+}
+
+.dark .translate-language-strip .app-select-trigger,
+.dark .translate-language-strip .language-swap {
+  background: var(--dark-surface-strong) !important;
+  color: var(--dark-muted-strong) !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+
+.dark .translate-language-strip .language-swap {
+  background: rgba(237, 245, 255, 0.08) !important;
+}
+
+.dark .lookup-search,
+.dark .input,
+.dark .textarea,
+.dark .app-select-trigger,
+.dark .definition-card,
+.dark .study-card,
+.dark .dictionary-card,
+.dark .dictionary-suggestion-panel,
+.dark .app-select-menu,
+.dark .empty-state,
+.dark .notice,
+.dark .provider-status-card,
+.dark .dictionary-manager-item,
+.dark .release-check-item,
+.dark .backup-preview-card,
+.dark .dictionary-import-preview {
+  background: var(--dark-surface-strong) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+
+.dark .metric-card,
+.dark .mini-stat,
+.dark .metric-card:nth-child(1),
+.dark .metric-card:nth-child(2),
+.dark .metric-card:nth-child(3),
+.dark .metric-card:nth-child(4),
+.dark .mini-stat:nth-child(1),
+.dark .mini-stat:nth-child(2),
+.dark .mini-stat:nth-child(3),
+.dark .mini-stat:nth-child(4),
+.dark .launch-card:nth-child(1),
+.dark .launch-card:nth-child(2),
+.dark .launch-card:nth-child(3),
+.dark .launch-card:nth-child(4),
+.dark .content-button:nth-child(1),
+.dark .content-button:nth-child(2),
+.dark .content-button:nth-child(3),
+.dark .content-button:nth-child(4) {
+  background: var(--dark-surface-soft) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.14) !important;
+}
+
+.dark .button:not(.primary):not(.danger),
+.dark .chip,
+.dark .chip-button {
+  background: rgba(31, 45, 68, 0.74) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-muted-strong) !important;
+}
+
+.dark .button.primary,
+.dark .lookup-search button,
+.dark .translate-action-bar .button.primary {
+  background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+  color: #ffffff !important;
+  box-shadow: 0 14px 32px rgba(37, 99, 235, 0.24) !important;
+}
+
+.dark .button.danger {
+  background: rgba(248, 113, 113, 0.12) !important;
+  color: #fecaca !important;
+  border-color: rgba(248, 113, 113, 0.22) !important;
+}
+
+.dark .word-title,
+.dark .panel-title,
+.dark .pane-title,
+.dark .empty-title,
+.dark .item-title,
+.dark .mobile-title,
+.dark .mature-page-hero h1,
+.dark .translate-empty strong {
+  color: var(--dark-text) !important;
+}
+
+.dark .muted,
+.dark .small,
+.dark .field label,
+.dark .label,
+.dark .app-select-label,
+.dark .translate-card-topline,
+.dark .translate-result-head,
+.dark .example,
+.dark .metric-card span,
+.dark .mini-stat span,
+.dark .launch-text span,
+.dark .overview-item span {
+  color: var(--dark-muted) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(159, 176, 200, 0.78) !important;
+}
+
+.dark .app-select.open .app-select-trigger,
+.dark .input:focus,
+.dark .textarea:focus {
+  border-color: var(--dark-border-strong) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+}
+
+.dark .app-select-option.active,
+.dark .suggestion-item.active,
+.dark .suggestion-item:hover,
+.dark .chip.good,
+.dark .chip-button.active {
+  background: var(--dark-accent-soft) !important;
+  color: #bfdbfe !important;
+}
+
+.dark .translate-bottom-sheet .quick-inputs,
+.dark .suggestion-row,
+.dark .quick-inputs {
+  scrollbar-width: none;
+}
+
+@media (max-width: 560px) {
+  .dark .lookup-shell,
+  .dark .lookup-result-card,
+  .dark .translate-input-card,
+  .dark .translate-result-card,
+  .dark .translate-bottom-sheet,
+  .dark .panel {
+    border-radius: 28px !important;
+  }
+
+  .dark .translate-language-strip {
+    border-radius: 28px !important;
+  }
+}
