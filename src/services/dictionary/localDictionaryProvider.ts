@@ -1,5 +1,6 @@
 import { ApiProvider, AppStore, DictionaryEntry } from "../../types/models";
 import { normalizeHeadword } from "../../utils/text";
+import { buildEnabledLocalDictionaryIndex } from "./localDictionaryIndex";
 import { MockDictionaryProvider } from "./mockDictionaryProvider";
 import { canUseRemoteDictionaryProvider, createDictionaryProvider, enabledDictionaryProviders } from "./remoteDictionaryProviders";
 import { lookupStaticDictionarySources } from "./staticDictionarySources";
@@ -12,9 +13,10 @@ export async function lookupDictionary(store: AppStore, text: string): Promise<D
   }
 
   const lookupForms = buildLookupForms(normalized);
+  const localIndex = buildEnabledLocalDictionaryIndex(store);
 
   for (const form of lookupForms) {
-    const local = lookupLocalDictionary(store, form);
+    const local = lookupLocalDictionary(localIndex, form);
     if (local) {
       return local;
     }
@@ -35,19 +37,8 @@ export async function lookupDictionary(store: AppStore, text: string): Promise<D
   return new MockDictionaryProvider().lookup({ text });
 }
 
-function lookupLocalDictionary(store: AppStore, normalized: string): DictionaryEntry | undefined {
-  const enabledDictionaries = [...store.userDictionaries]
-    .filter((dictionary) => dictionary.enabled)
-    .sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100) || a.name.localeCompare(b.name));
-
-  for (const dictionary of enabledDictionaries) {
-    const entry = store.dictionaryEntries.find((item) => item.dictionaryId === dictionary.id && item.normalizedHeadword === normalized);
-    if (entry) {
-      return entry;
-    }
-  }
-
-  return store.dictionaryEntries.find((entry) => !entry.dictionaryId && entry.normalizedHeadword === normalized);
+function lookupLocalDictionary(index: Map<string, DictionaryEntry[]>, normalized: string): DictionaryEntry | undefined {
+  return index.get(normalized)?.[0];
 }
 
 async function lookupRemoteDictionaries(store: AppStore, text: string): Promise<DictionaryEntry | null> {
