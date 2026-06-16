@@ -25,11 +25,8 @@ export function App() {
     const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const useDark = store.settings.theme === "dark" || (store.settings.theme === "system" && systemDark);
     root.classList.toggle("dark", useDark);
+    root.classList.remove("font-system");
   }, [store.settings.theme]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("font-system", store.settings.fontMode === "system");
-  }, [store.settings.fontMode]);
 
   function openDictionary(word: string) {
     setDictionaryQuery(word);
