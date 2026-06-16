@@ -36,16 +36,18 @@ export async function lookupDictionary(store: AppStore, text: string): Promise<D
 }
 
 function lookupLocalDictionary(store: AppStore, normalized: string): DictionaryEntry | undefined {
-  const enabledDictionaryIds = new Set(
-    store.userDictionaries.filter((dictionary) => dictionary.enabled).map((dictionary) => dictionary.id)
-  );
+  const enabledDictionaries = [...store.userDictionaries]
+    .filter((dictionary) => dictionary.enabled)
+    .sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100) || a.name.localeCompare(b.name));
 
-  return store.dictionaryEntries.find((entry) => {
-    if (entry.normalizedHeadword !== normalized) {
-      return false;
+  for (const dictionary of enabledDictionaries) {
+    const entry = store.dictionaryEntries.find((item) => item.dictionaryId === dictionary.id && item.normalizedHeadword === normalized);
+    if (entry) {
+      return entry;
     }
-    return !entry.dictionaryId || enabledDictionaryIds.has(entry.dictionaryId);
-  });
+  }
+
+  return store.dictionaryEntries.find((entry) => !entry.dictionaryId && entry.normalizedHeadword === normalized);
 }
 
 async function lookupRemoteDictionaries(store: AppStore, text: string): Promise<DictionaryEntry | null> {
