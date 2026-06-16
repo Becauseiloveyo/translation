@@ -1,9 +1,8 @@
 import { ApiProvider, AppStore, DictionaryEntry } from "../../types/models";
 import { normalizeHeadword } from "../../utils/text";
-import { lookupBuiltinEnglishChineseDictionary } from "./builtinEnglishChineseDictionary";
-import { lookupExpandedEnglishChineseDictionary } from "./expandedEnglishChineseDictionary";
 import { MockDictionaryProvider } from "./mockDictionaryProvider";
 import { canUseRemoteDictionaryProvider, createDictionaryProvider, enabledDictionaryProviders } from "./remoteDictionaryProviders";
+import { lookupStaticDictionarySources } from "./staticDictionarySources";
 import { buildLookupForms } from "./wordForms";
 
 export async function lookupDictionary(store: AppStore, text: string): Promise<DictionaryEntry | null> {
@@ -22,7 +21,7 @@ export async function lookupDictionary(store: AppStore, text: string): Promise<D
   }
 
   for (const form of lookupForms) {
-    const builtin = lookupBuiltinEnglishChineseDictionary(form) ?? lookupExpandedEnglishChineseDictionary(form);
+    const builtin = lookupStaticDictionarySources(form);
     if (builtin) {
       return builtin;
     }
