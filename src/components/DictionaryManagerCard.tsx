@@ -1,5 +1,5 @@
 import { Trash2, Upload } from "lucide-react";
-import { ChangeEvent, useMemo, useState } from "react";
+import { ChangeEvent, Dispatch, SetStateAction, useMemo, useState } from "react";
 import { AppSelect, AppSelectOption } from "./AppSelect";
 import { EmptyState } from "./EmptyState";
 import { parseUserDictionaryImport, ParsedUserDictionaryImport } from "../services/dictionary/userDictionaryImport";
@@ -11,7 +11,7 @@ type DictionaryConflictMode = "keep" | "skip" | "replace" | "merge";
 
 type DictionaryManagerCardProps = {
   store: AppStore;
-  setStore: (updater: (current: AppStore) => AppStore) => void;
+  setStore: Dispatch<SetStateAction<AppStore>>;
 };
 
 const conflictOptions: AppSelectOption[] = [
