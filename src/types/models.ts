@@ -65,6 +65,11 @@ export type VocabularyItem = {
   word: string;
   translation?: string;
   note?: string;
+  phonetic?: string;
+  partOfSpeech?: string;
+  source?: string;
+  definitionEn?: string;
+  example?: string;
   status: VocabularyStatus;
   reviewCount?: number;
   masteredCount?: number;
