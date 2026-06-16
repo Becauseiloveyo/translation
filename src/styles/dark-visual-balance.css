@@ -218,6 +218,90 @@
   scrollbar-width: none;
 }
 
+/* Settings dropdowns must push the next card down instead of floating over it. */
+.settings-page .settings-card .app-select,
+.settings-page .backup-card .app-select,
+.settings-page .provider-summary-card .app-select,
+.settings-page .dictionary-manager-card .app-select,
+.settings-page .settings-tools-card .app-select {
+  position: static !important;
+}
+
+.settings-page .settings-card .app-select-menu,
+.settings-page .backup-card .app-select-menu,
+.settings-page .provider-summary-card .app-select-menu,
+.settings-page .dictionary-manager-card .app-select-menu,
+.settings-page .settings-tools-card .app-select-menu {
+  position: static !important;
+  inset: auto !important;
+  z-index: auto !important;
+  margin-top: 8px !important;
+  max-height: none !important;
+  overflow: visible !important;
+  transform: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+}
+
+/* Hard overrides for deep mobile dark mode: avoid washed-out gray islands. */
+.dark .vocabulary-page form.panel,
+.dark .vocabulary-page .panel.pad.stack,
+.dark .vocabulary-page .vocabulary-grid > .panel,
+.dark .settings-page .panel,
+.dark .settings-page .settings-card,
+.dark .settings-page .backup-card,
+.dark .settings-page .provider-summary-card,
+.dark .settings-page .settings-tools-card,
+.dark .settings-page .dictionary-manager-card,
+.dark .settings-page .release-preflight-card {
+  background: rgba(16, 25, 41, 0.92) !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+  color: var(--dark-text) !important;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.20) !important;
+}
+
+.dark .vocabulary-page .metric-grid > *,
+.dark .vocabulary-page .metric-grid .mini-stat,
+.dark .vocabulary-page .search-row,
+.dark .vocabulary-page .list-item,
+.dark .settings-page .app-select-trigger,
+.dark .settings-page .input,
+.dark .settings-page .textarea,
+.dark .settings-page .app-select-menu,
+.dark .settings-page .notice,
+.dark .settings-page .provider-status-card {
+  background: rgba(28, 40, 61, 0.96) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: var(--dark-text) !important;
+}
+
+.dark .vocabulary-page .search-row {
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12) !important;
+}
+
+.dark .vocabulary-page .search-row svg,
+.dark .vocabulary-page .search-row input::placeholder,
+.dark .settings-page .field label,
+.dark .settings-page .app-select-label {
+  color: rgba(200, 213, 232, 0.74) !important;
+}
+
+.dark .settings-page .button:not(.primary):not(.danger),
+.dark .settings-tool-grid .button,
+.dark .backup-actions .button:not(.primary) {
+  background: rgba(28, 40, 61, 0.92) !important;
+  color: var(--dark-muted-strong) !important;
+  border-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+.dark .app-select-option {
+  color: var(--dark-text) !important;
+}
+
+.dark .app-select-option small {
+  color: var(--dark-muted) !important;
+}
+
 @media (max-width: 560px) {
   .dark .lookup-shell,
   .dark .lookup-result-card,
@@ -230,5 +314,13 @@
 
   .dark .translate-language-strip {
     border-radius: 28px !important;
+  }
+
+  .settings-page .settings-card .app-select-menu,
+  .settings-page .backup-card .app-select-menu,
+  .settings-page .provider-summary-card .app-select-menu,
+  .settings-page .dictionary-manager-card .app-select-menu,
+  .settings-page .settings-tools-card .app-select-menu {
+    border-radius: 20px !important;
   }
 }
