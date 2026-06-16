@@ -3,6 +3,7 @@ apply plugin: 'com.android.application'
 // Release workflow overrides these values with -PVERSION_CODE and -PVERSION_NAME.
 // Latest release uses the refined LiteDict L + bookmark launcher icon.
 // Latest release also includes the app-style translation, review, lookup, and backup upgrades.
+// Latest release points Android launcher icons to a unified drawable fallback for MIUI compatibility.
 def releaseVersionCode = (project.findProperty('VERSION_CODE') ?: '1').toString().toInteger()
 def releaseVersionName = (project.findProperty('VERSION_NAME') ?: '1.0.0').toString()
 
