@@ -147,6 +147,7 @@ export type UserDictionary = {
   language: string;
   enabled: boolean;
   entryCount: number;
+  priority?: number;
   sourceType?: string;
   createdAt: string;
   updatedAt: string;
