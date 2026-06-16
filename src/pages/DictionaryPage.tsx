@@ -200,7 +200,7 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
               {entry.definitions.map((definition) => (
                 <section className="definition-card" key={definition.id}>
                   <div className="definition-meta">
-                    {definition.partOfSpeech ? <span className="chip">{partOfSpeechLabel(definition.partOfSpeech)}</span> : null}
+                    {definition.partOfSpeech ? <span className="chip">{definition.partOfSpeech}</span> : null}
                     {definition.source ? <span className="chip">{sourceLabel(definition.source)}</span> : null}
                   </div>
                   {definition.definitionZh ? <p className="definition-zh">{definition.definitionZh}</p> : <p className="definition-zh">{definition.definitionEn}</p>}
@@ -286,22 +286,6 @@ function levenshtein(a: string, b: string): number {
     }
   }
   return rows[a.length][b.length];
-}
-
-function partOfSpeechLabel(value: string): string {
-  const normalized = value.toLocaleLowerCase();
-  const labels: Record<string, string> = {
-    noun: "名词",
-    verb: "动词",
-    adjective: "形容词",
-    adverb: "副词",
-    pronoun: "代词",
-    preposition: "介词",
-    conjunction: "连词",
-    interjection: "感叹词",
-    entry: "词条"
-  };
-  return labels[normalized] ?? value;
 }
 
 function sourceLabel(value: string): string {
