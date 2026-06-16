@@ -94,6 +94,10 @@ export function DictionaryManagerCard({ store, setStore }: DictionaryManagerCard
       return;
     }
     const summary = buildPreview(pendingImport, store.dictionaryEntries);
+    if (!summary) {
+      setMessage("导入预览失效，请重新选择词库文件。");
+      return;
+    }
     setStore((current) => applyDictionaryImport(current, pendingImport, conflictMode));
     setMessage(`已导入 ${pendingImport.userDictionary.name}，解析 ${summary.total} 个词条，重复 ${summary.conflicts} 个。`);
     setPendingImport(null);
