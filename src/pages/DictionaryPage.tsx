@@ -1,5 +1,5 @@
 import { Languages, Search, Star, Volume2 } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../components/EmptyState";
 import { PageKey } from "../components/AppShell";
 import { lookupDictionary } from "../services/dictionary/localDictionaryProvider";
@@ -9,14 +9,16 @@ import { addRecentLookup, upsertVocabulary } from "../services/storage/localStor
 import { PageProps } from "../types/app";
 import { Definition, DictionaryEntry } from "../types/models";
 import { createId, nowIso } from "../utils/id";
+import { normalizeHeadword } from "../utils/text";
 
 type DictionaryPageProps = PageProps & {
   onNavigate?: (page: PageKey) => void;
+  initialQuery?: string;
 };
 
 const defaultQuickWords = ["serendipity", "sustainable", "local-first", "translation"];
 
-export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPageProps) {
+export function DictionaryPage({ store, setStore, onNavigate, initialQuery }: DictionaryPageProps) {
   const [query, setQuery] = useState("");
   const [entry, setEntry] = useState<DictionaryEntry | null>(null);
   const [error, setError] = useState("");
@@ -33,6 +35,22 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
   );
   const suggestions = useMemo(() => suggestDictionaryWords(query, suggestionSeedWords, 5), [query, suggestionSeedWords]);
   const quickWords = recentWords.length ? recentWords.map((item) => item.text) : defaultQuickWords;
+  const savedVocabulary = useMemo(
+    () => (entry ? store.vocabulary.find((item) => item.word.toLocaleLowerCase() === entry.headword.toLocaleLowerCase()) : undefined),
+    [entry, store.vocabulary]
+  );
+  const normalizedQuery = normalizeHeadword(query);
+  const lookupWasNormalized = Boolean(entry && normalizedQuery && normalizedQuery !== entry.normalizedHeadword);
+
+  useEffect(() => {
+    const next = initialQuery?.trim();
+    if (!next) {
+      return;
+    }
+    setQuery(next);
+    void runLookup(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuery]);
 
   async function handleLookup(event: FormEvent) {
     event.preventDefault();
@@ -96,7 +114,12 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
         id: existed?.id ?? createId("vocab"),
         word: entry.headword,
         translation: first?.definitionZh ?? first?.definitionEn,
-        note: entry.source ? `来自 ${sourceLabel(entry.source)}` : undefined,
+        note: existed?.note ?? (entry.source ? `来自 ${sourceLabel(entry.source)}` : undefined),
+        phonetic: entry.phoneticUS ?? entry.phoneticUK,
+        partOfSpeech: first?.partOfSpeech,
+        source: entry.source ?? first?.source,
+        definitionEn: first?.definitionEn,
+        example: first?.exampleZh ?? first?.exampleEn,
         status: existed?.status ?? "new",
         reviewCount: existed?.reviewCount ?? 0,
         masteredCount: existed?.masteredCount ?? 0,
@@ -195,6 +218,11 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
             <div className="dictionary-card-head">
               <div>
                 <div className="word-title">{entry.headword}</div>
+                <div className="definition-meta dictionary-result-meta">
+                  {entry.source ? <span className="chip">来源：{sourceLabel(entry.source)}</span> : null}
+                  {lookupWasNormalized ? <span className="chip good">词形：{query.trim()} → {entry.headword}</span> : null}
+                  {savedVocabulary ? <span className="chip good">已在词汇本</span> : null}
+                </div>
                 <div className="phonetic-row">
                   <button className="chip-button" type="button" onClick={() => playPronunciation("en-US")} title="播放美式发音">
                     美式 {entry.phoneticUS ?? fallbackPhonetic(entry.headword)}
@@ -206,9 +234,9 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
                   </button>
                 </div>
               </div>
-              <button className="button" type="button" onClick={addToVocabulary}>
+              <button className={savedVocabulary ? "button ghost-button" : "button"} type="button" onClick={addToVocabulary}>
                 <Star size={16} aria-hidden="true" />
-                收藏
+                {savedVocabulary ? "已收藏" : "收藏"}
               </button>
             </div>
 
@@ -221,15 +249,35 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
                   </div>
                   {definition.definitionZh ? <p className="definition-zh">{definition.definitionZh}</p> : <p className="definition-zh">{definition.definitionEn}</p>}
                   {definition.definitionZh && definition.definitionEn ? <p className="definition-en muted">{definition.definitionEn}</p> : null}
-                  {definition.exampleZh ? <p className="example muted">{definition.exampleZh}</p> : definition.exampleEn ? <p className="example muted">例句：{definition.exampleEn}</p> : null}
+                  {definition.exampleZh ? <p className="example muted">例句：{definition.exampleZh}</p> : definition.exampleEn ? <p className="example muted">例句：{definition.exampleEn}</p> : null}
                 </section>
               ))}
             </div>
+
+            {entry.synonyms?.length || entry.antonyms?.length ? (
+              <div className="dictionary-relation-grid">
+                {entry.synonyms?.length ? <WordRelation title="同义词" words={entry.synonyms} onSelect={applyQuickWord} /> : null}
+                {entry.antonyms?.length ? <WordRelation title="反义词" words={entry.antonyms} onSelect={applyQuickWord} /> : null}
+              </div>
+            ) : null}
           </div>
         ) : (
           <EmptyState title="输入单词开始" body={recentWords.length ? "最近查过的单词会自动显示在输入框下方。" : undefined} />
         )}
       </section>
+    </section>
+  );
+}
+
+function WordRelation({ title, words, onSelect }: { title: string; words: string[]; onSelect: (word: string) => void }) {
+  return (
+    <section className="definition-card relation-card">
+      <div className="definition-meta"><span className="chip">{title}</span></div>
+      <div className="quick-inputs mature-quick-row">
+        {words.slice(0, 8).map((word) => (
+          <button className="chip-button" type="button" key={word} onClick={() => onSelect(word)}>{word}</button>
+        ))}
+      </div>
     </section>
   );
 }
