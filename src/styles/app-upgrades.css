@@ -104,6 +104,60 @@
   background: rgba(241, 245, 249, 0.9) !important;
 }
 
+.lookup-search-wrap {
+  position: relative;
+}
+
+.dictionary-suggestion-panel {
+  margin-top: 8px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.10);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: suggestion-panel-in 120ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+@keyframes suggestion-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.suggestion-item {
+  width: 100%;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  color: #0f172a;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  font-weight: 800;
+}
+
+.suggestion-item small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.suggestion-item.active,
+.suggestion-item:hover {
+  background: rgba(37, 99, 235, 0.10);
+  color: #1d4ed8;
+}
+
 .suggestion-row {
   margin-top: 12px;
   display: flex;
@@ -183,6 +237,26 @@
   letter-spacing: -0.02em;
 }
 
+.dictionary-manager-card {
+  margin-top: 16px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.80);
+  box-shadow: var(--product-shadow);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+.dictionary-manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dictionary-manager-item {
+  border-radius: 22px;
+  background: rgba(248, 250, 252, 0.92);
+  padding: 14px;
+}
+
 .backup-card .notice {
   margin-top: 2px;
 }
@@ -232,7 +306,8 @@
   .translate-result-card,
   .translate-bottom-sheet,
   .provider-summary-card,
-  .backup-card {
+  .backup-card,
+  .dictionary-manager-card {
     border-radius: 26px;
   }
 
