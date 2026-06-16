@@ -1,5 +1,6 @@
 import { ApiProvider, AppStore, DictionaryEntry } from "../../types/models";
 import { normalizeHeadword } from "../../utils/text";
+import { lookupBuiltinEnglishChineseDictionary } from "./builtinEnglishChineseDictionary";
 import { MockDictionaryProvider } from "./mockDictionaryProvider";
 import { canUseRemoteDictionaryProvider, createDictionaryProvider, enabledDictionaryProviders } from "./remoteDictionaryProviders";
 
@@ -12,6 +13,11 @@ export async function lookupDictionary(store: AppStore, text: string): Promise<D
   const local = lookupLocalDictionary(store, normalized);
   if (local) {
     return local;
+  }
+
+  const builtin = lookupBuiltinEnglishChineseDictionary(text);
+  if (builtin) {
+    return builtin;
   }
 
   const remote = await lookupRemoteDictionaries(store, text);
@@ -46,7 +52,7 @@ async function lookupRemoteDictionaries(store: AppStore, text: string): Promise<
         return entry;
       }
     } catch {
-      // Keep lookup resilient: a broken online provider must not block local dictionaries or mock fallback.
+      // Keep lookup resilient: a broken online provider must not block local dictionaries, built-in dictionary, or mock fallback.
     }
   }
 
