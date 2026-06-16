@@ -9,7 +9,7 @@ import { ReleasePreflightCard } from "../components/ReleasePreflightCard";
 import { createDictionaryProvider, canUseRemoteDictionaryProvider } from "../services/dictionary/remoteDictionaryProviders";
 import { resetStore, upsertProvider } from "../services/storage/localStore";
 import { PageProps } from "../types/app";
-import { ApiProvider, AppSettings, FontMode, ProviderPurpose, ProviderType } from "../types/models";
+import { ApiProvider, AppSettings, ProviderPurpose, ProviderType } from "../types/models";
 import { createId, nowIso } from "../utils/id";
 
 type ProviderForm = {
@@ -49,11 +49,6 @@ const themeOptions: AppSelectOption[] = [
   { value: "dark", label: "深色" }
 ];
 
-const fontOptions: AppSelectOption[] = [
-  { value: "default", label: "默认字体", description: "更接近普通应用，避免手写体" },
-  { value: "system", label: "跟随系统字体", description: "使用手机系统字体设置" }
-];
-
 const historyOptions: AppSelectOption[] = [
   { value: "true", label: "自动保存", description: "翻译结果保存到历史" },
   { value: "false", label: "不自动保存" }
@@ -81,6 +76,8 @@ export function SettingsPage({ store, setStore }: PageProps) {
   const [providerForm, setProviderForm] = useState<ProviderForm>(emptyProviderForm);
   const [testMessage, setTestMessage] = useState("");
   const [showAdvancedProviders, setShowAdvancedProviders] = useState(false);
+  const [showDictionaryTools, setShowDictionaryTools] = useState(false);
+  const [showReleaseTools, setShowReleaseTools] = useState(false);
 
   const sortedProviders = useMemo(
     () => [...store.apiProviders].sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name)),
@@ -236,26 +233,38 @@ export function SettingsPage({ store, setStore }: PageProps) {
         <div className="panel pad stack settings-card">
           <div>
             <div className="panel-title">偏好</div>
-            <div className="muted small">日常使用只需要调整主题、字体和历史保存。</div>
+            <div className="muted small">保留真正有用的设置；字体固定为应用默认，避免系统手写体影响可读性。</div>
           </div>
           <div className="grid-two">
             <AppSelect label="主题" value={store.settings.theme} options={themeOptions} onChange={(value) => updateSetting("theme", value as AppSettings["theme"])} />
-            <AppSelect label="字体" value={store.settings.fontMode} options={fontOptions} onChange={(value) => updateSetting("fontMode", value as FontMode)} />
-          </div>
-          <div className="grid-two">
             <AppSelect label="历史" value={store.settings.autoSaveHistory ? "true" : "false"} options={historyOptions} onChange={(value) => updateSetting("autoSaveHistory", value === "true")} />
-            <div className="field">
-              <label htmlFor="local-folder">本地词典文件夹</label>
-              <input id="local-folder" className="input" value={store.settings.localDictionaryFolder} onChange={(event) => updateSetting("localDictionaryFolder", event.target.value)} />
-            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="local-folder">本地词典文件夹</label>
+            <input id="local-folder" className="input" value={store.settings.localDictionaryFolder} onChange={(event) => updateSetting("localDictionaryFolder", event.target.value)} />
           </div>
         </div>
 
         <BackupRestoreCard store={store} setStore={setStore} />
       </div>
 
-      <DictionaryManagerCard store={store} setStore={setStore} />
-      <ReleasePreflightCard store={store} />
+      <section className="panel pad stack settings-card settings-tools-card">
+        <div>
+          <div className="panel-title">工具</div>
+          <div className="muted small">不常用功能默认收起，避免设置页太乱。</div>
+        </div>
+        <div className="settings-tool-grid">
+          <button className="button" type="button" onClick={() => setShowDictionaryTools((value) => !value)}>
+            {showDictionaryTools ? "收起词库管理" : "词库管理"}
+          </button>
+          <button className="button" type="button" onClick={() => setShowReleaseTools((value) => !value)}>
+            {showReleaseTools ? "收起发版自检" : "发版自检"}
+          </button>
+        </div>
+      </section>
+
+      {showDictionaryTools ? <DictionaryManagerCard store={store} setStore={setStore} /> : null}
+      {showReleaseTools ? <ReleasePreflightCard store={store} /> : null}
 
       <section className="panel pad stack provider-summary-card">
         <div className="item-head">
