@@ -7,11 +7,11 @@ export function suggestDictionaryWords(query: string, extraWords: string[] = [],
     return [];
   }
 
-  const rankedWords = collectRankedWords([...extraWords, ...getStaticDictionaryHeadwords()]);
+  const rankedWords = collectRankedWords([query, ...extraWords, ...getStaticDictionaryHeadwords()]);
   return rankedWords
     .map((item) => ({ ...item, score: scoreSuggestion(normalizedQuery, item.normalized, item.rank) }))
     .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.rank - b.rank || a.word.localeCompare(b.word))
+    .sort((a, b) => b.score - a.score || a.normalized.length - b.normalized.length || a.rank - b.rank || a.word.localeCompare(b.word))
     .slice(0, limit)
     .map((item) => item.word);
 }
@@ -48,31 +48,5 @@ function scoreSuggestion(query: string, word: string, rank: number): number {
     return 80000 + rankBoost - Math.max(0, word.length - query.length) * 4;
   }
 
-  if (query.length < 3) {
-    return 0;
-  }
-
-  if (word.includes(query)) {
-    return 30000 + rankBoost - word.length;
-  }
-
-  const distance = levenshtein(query, word.slice(0, Math.max(query.length, 3)));
-  return distance <= 2 ? 10000 + rankBoost - distance * 500 : 0;
-}
-
-function levenshtein(a: string, b: string): number {
-  const rows = Array.from({ length: a.length + 1 }, (_, index) => [index]);
-  for (let column = 1; column <= b.length; column += 1) {
-    rows[0][column] = column;
-  }
-  for (let i = 1; i <= a.length; i += 1) {
-    for (let j = 1; j <= b.length; j += 1) {
-      rows[i][j] = Math.min(
-        rows[i - 1][j] + 1,
-        rows[i][j - 1] + 1,
-        rows[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
-      );
-    }
-  }
-  return rows[a.length][b.length];
+  return 0;
 }
