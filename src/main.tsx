@@ -7,6 +7,7 @@ import "./styles/mobile-app.css";
 import "./styles/neo-ui.css";
 import "./styles/product-ui.css";
 import "./styles/app-upgrades.css";
+import "./styles/dictionary-manager-polish.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
