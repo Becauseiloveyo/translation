@@ -3,6 +3,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { EmptyState } from "../components/EmptyState";
 import { PageKey } from "../components/AppShell";
 import { lookupDictionary } from "../services/dictionary/localDictionaryProvider";
+import { suggestDictionaryWords } from "../services/dictionary/dictionarySuggestions";
 import { translateWithProvider } from "../services/providers/registry";
 import { addRecentLookup, upsertVocabulary } from "../services/storage/localStore";
 import { PageProps } from "../types/app";
@@ -22,7 +23,15 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
   const [isLoading, setIsLoading] = useState(false);
   const queryKind = useMemo(() => getQueryKind(query), [query]);
   const recentWords = useMemo(() => store.recentLookups.filter((item) => item.kind === "word").slice(0, 6), [store.recentLookups]);
-  const suggestions = useMemo(() => getSuggestions(query, store.vocabulary.map((item) => item.word)), [query, store.vocabulary]);
+  const suggestionSeedWords = useMemo(
+    () => [
+      ...recentWords.map((item) => item.text),
+      ...store.vocabulary.map((item) => item.word),
+      ...store.dictionaryEntries.map((item) => item.headword)
+    ],
+    [recentWords, store.vocabulary, store.dictionaryEntries]
+  );
+  const suggestions = useMemo(() => suggestDictionaryWords(query, suggestionSeedWords, 5), [query, suggestionSeedWords]);
   const quickWords = recentWords.length ? recentWords.map((item) => item.text) : defaultQuickWords;
 
   async function handleLookup(event: FormEvent) {
@@ -162,7 +171,7 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
 
         {suggestions.length ? (
           <div className="suggestion-row">
-            <span>可能想查</span>
+            <span>候选词</span>
             {suggestions.map((word) => (
               <button type="button" key={word} onClick={() => applyQuickWord(word)}>
                 {word}
@@ -241,51 +250,6 @@ function getQueryKind(query: string) {
     return "短语";
   }
   return "句子";
-}
-
-function getSuggestions(query: string, words: string[]): string[] {
-  const trimmed = query.trim().toLocaleLowerCase();
-  if (trimmed.length < 2) {
-    return [];
-  }
-  const uniqueWords = Array.from(new Set(words.map((word) => word.trim()).filter(Boolean)));
-  return uniqueWords
-    .map((word) => ({ word, score: suggestionScore(trimmed, word.toLocaleLowerCase()) }))
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.word.localeCompare(b.word))
-    .slice(0, 4)
-    .map((item) => item.word);
-}
-
-function suggestionScore(query: string, word: string): number {
-  if (word === query) {
-    return 0;
-  }
-  if (word.startsWith(query)) {
-    return 100 - word.length;
-  }
-  if (word.includes(query)) {
-    return 60 - word.length;
-  }
-  const distance = levenshtein(query, word.slice(0, Math.max(query.length, 3)));
-  return distance <= 2 ? 30 - distance : 0;
-}
-
-function levenshtein(a: string, b: string): number {
-  const rows = Array.from({ length: a.length + 1 }, (_, index) => [index]);
-  for (let column = 1; column <= b.length; column += 1) {
-    rows[0][column] = column;
-  }
-  for (let i = 1; i <= a.length; i += 1) {
-    for (let j = 1; j <= b.length; j += 1) {
-      rows[i][j] = Math.min(
-        rows[i - 1][j] + 1,
-        rows[i][j - 1] + 1,
-        rows[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
-      );
-    }
-  }
-  return rows[a.length][b.length];
 }
 
 function sourceLabel(value: string): string {
