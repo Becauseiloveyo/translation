@@ -14,6 +14,7 @@ import { loadStore, saveStore } from "./services/storage/localStore";
 export function App() {
   const [page, setPage] = useState<PageKey>("dictionary");
   const [store, setStore] = useState<AppStore>(() => loadStore());
+  const [dictionaryQuery, setDictionaryQuery] = useState("");
 
   useEffect(() => {
     saveStore(store);
@@ -30,6 +31,11 @@ export function App() {
     document.documentElement.classList.toggle("font-system", store.settings.fontMode === "system");
   }, [store.settings.fontMode]);
 
+  function openDictionary(word: string) {
+    setDictionaryQuery(word);
+    setPage("dictionary");
+  }
+
   const content = useMemo(() => {
     const shared = { store, setStore };
     switch (page) {
@@ -38,9 +44,9 @@ export function App() {
       case "translate":
         return <TranslatePage {...shared} />;
       case "dictionary":
-        return <DictionaryPage {...shared} onNavigate={setPage} />;
+        return <DictionaryPage {...shared} onNavigate={setPage} initialQuery={dictionaryQuery} />;
       case "vocabulary":
-        return <VocabularyPage {...shared} />;
+        return <VocabularyPage {...shared} onLookup={openDictionary} />;
       case "glossary":
         return <GlossaryPage {...shared} />;
       case "sources":
@@ -50,9 +56,9 @@ export function App() {
       case "settings":
         return <SettingsPage {...shared} />;
       default:
-        return <DictionaryPage {...shared} onNavigate={setPage} />;
+        return <DictionaryPage {...shared} onNavigate={setPage} initialQuery={dictionaryQuery} />;
     }
-  }, [page, store]);
+  }, [dictionaryQuery, page, store]);
 
   return (
     <AppShell currentPage={page} onPageChange={setPage}>
