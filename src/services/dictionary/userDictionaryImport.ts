@@ -149,11 +149,19 @@ function splitLine(line: string, delimiter: string): string[] {
 
 function normalizeHeader(header: string): keyof ImportRow | undefined {
   const normalized = header.trim().toLocaleLowerCase().replace(/[\s_-]+/g, "");
-  if (normalized === "word" || normalized === "headword") return normalized;
-  if (normalized === "phonetic" || normalized === "phoneticus" || normalized === "phoneticuk") return normalized as keyof ImportRow;
+  if (normalized === "word") return "word";
+  if (normalized === "headword") return "headword";
+  if (normalized === "phonetic") return "phonetic";
+  if (normalized === "phoneticus") return "phoneticUS";
+  if (normalized === "phoneticuk") return "phoneticUK";
   if (normalized === "pos" || normalized === "partofspeech") return "pos";
-  if (normalized === "translation" || normalized === "definition" || normalized === "definitionzh" || normalized === "definitionen") return normalized as keyof ImportRow;
-  if (normalized === "example" || normalized === "exampleen" || normalized === "examplezh") return normalized as keyof ImportRow;
+  if (normalized === "translation") return "translation";
+  if (normalized === "definition") return "definition";
+  if (normalized === "definitionzh") return "definitionZh";
+  if (normalized === "definitionen") return "definitionEn";
+  if (normalized === "example") return "example";
+  if (normalized === "exampleen") return "exampleEn";
+  if (normalized === "examplezh") return "exampleZh";
   return undefined;
 }
 
