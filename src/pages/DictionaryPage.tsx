@@ -1,5 +1,5 @@
 import { Languages, Search, Star, Volume2 } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent, useMemo, useState } from "react";
 import { EmptyState } from "../components/EmptyState";
 import { PageKey } from "../components/AppShell";
 import { lookupDictionary } from "../services/dictionary/localDictionaryProvider";
@@ -21,6 +21,7 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
   const [entry, setEntry] = useState<DictionaryEntry | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const queryKind = useMemo(() => getQueryKind(query), [query]);
   const recentWords = useMemo(() => store.recentLookups.filter((item) => item.kind === "word").slice(0, 6), [store.recentLookups]);
   const suggestionSeedWords = useMemo(
@@ -37,6 +38,26 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
   async function handleLookup(event: FormEvent) {
     event.preventDefault();
     await runLookup(query);
+  }
+
+  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!suggestions.length) {
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveSuggestionIndex((index) => Math.min(index + 1, suggestions.length - 1));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveSuggestionIndex((index) => Math.max(index - 1, 0));
+      return;
+    }
+    if (event.key === "Enter" && suggestions[activeSuggestionIndex]) {
+      event.preventDefault();
+      applyQuickWord(suggestions[activeSuggestionIndex]);
+    }
   }
 
   async function runLookup(nextQuery: string) {
@@ -110,7 +131,13 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
 
   function applyQuickWord(word: string) {
     setQuery(word);
+    setActiveSuggestionIndex(0);
     void runLookup(word);
+  }
+
+  function updateQuery(value: string) {
+    setQuery(value);
+    setActiveSuggestionIndex(0);
   }
 
   function playPronunciation(locale: "en-US" | "en-GB") {
@@ -140,19 +167,41 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
       </header>
 
       <section className="lookup-shell">
-        <form className="lookup-search" onSubmit={handleLookup}>
-          <Search size={22} aria-hidden="true" />
-          <input
-            id="dictionary-query"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="输入单词"
-            autoComplete="off"
-          />
-          <button type="submit" disabled={isLoading || !query.trim()}>
-            {isLoading ? "查询中" : "查词"}
-          </button>
-        </form>
+        <div className="lookup-search-wrap">
+          <form className="lookup-search" onSubmit={handleLookup}>
+            <Search size={22} aria-hidden="true" />
+            <input
+              id="dictionary-query"
+              value={query}
+              onChange={(event) => updateQuery(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="输入单词"
+              autoComplete="off"
+            />
+            <button type="submit" disabled={isLoading || !query.trim()}>
+              {isLoading ? "查询中" : "查词"}
+            </button>
+          </form>
+
+          {suggestions.length ? (
+            <div className="dictionary-suggestion-panel" role="listbox" aria-label="候选词">
+              {suggestions.map((word, index) => (
+                <button
+                  className={index === activeSuggestionIndex ? "suggestion-item active" : "suggestion-item"}
+                  type="button"
+                  key={word}
+                  role="option"
+                  aria-selected={index === activeSuggestionIndex}
+                  onMouseEnter={() => setActiveSuggestionIndex(index)}
+                  onClick={() => applyQuickWord(word)}
+                >
+                  <span>{word}</span>
+                  <small>{index === 0 ? "最可能" : "候选"}</small>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
 
         <div className="lookup-meta-row">
           <span>{queryKind}</span>
@@ -168,17 +217,6 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
             </button>
           ))}
         </div>
-
-        {suggestions.length ? (
-          <div className="suggestion-row">
-            <span>候选词</span>
-            {suggestions.map((word) => (
-              <button type="button" key={word} onClick={() => applyQuickWord(word)}>
-                {word}
-              </button>
-            ))}
-          </div>
-        ) : null}
       </section>
 
       <section className="lookup-result-card">
