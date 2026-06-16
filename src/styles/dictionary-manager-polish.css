@@ -1,4 +1,5 @@
-.dictionary-import-preview {
+.dictionary-import-preview,
+.backup-preview-card {
   border-radius: 24px;
   background:
     radial-gradient(circle at 100% 0, rgba(37, 99, 235, 0.12), transparent 160px),
@@ -16,7 +17,8 @@
 }
 
 .dictionary-manager-item .row,
-.dictionary-import-preview .row {
+.dictionary-import-preview .row,
+.backup-preview-card .row {
   flex-wrap: wrap;
 }
 
@@ -49,19 +51,73 @@
   text-align: left;
 }
 
+.release-preflight-card {
+  margin-top: 16px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.80);
+  box-shadow: var(--product-shadow);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+.release-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.release-check-item {
+  border-radius: 20px;
+  background: rgba(248, 250, 252, 0.92);
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #64748b;
+}
+
+.release-check-item.good {
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.10);
+}
+
+.release-check-item strong,
+.release-check-item span {
+  display: block;
+}
+
+.release-check-item strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.release-check-item span {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.release-preflight-card .notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 @media (max-width: 560px) {
   .dictionary-import-preview,
-  .dictionary-manager-item {
+  .dictionary-manager-item,
+  .backup-preview-card {
     border-radius: 20px;
   }
 
   .dictionary-manager-item .item-head,
-  .dictionary-import-preview .item-head {
+  .dictionary-import-preview .item-head,
+  .backup-preview-card .item-head {
     align-items: stretch;
   }
 
   .dictionary-manager-item .row,
-  .dictionary-import-preview .row {
+  .dictionary-import-preview .row,
+  .backup-preview-card .row {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -69,7 +125,8 @@
 
   .dictionary-manager-item .button,
   .dictionary-manager-item .chip-button,
-  .dictionary-import-preview .button {
+  .dictionary-import-preview .button,
+  .backup-preview-card .button {
     justify-content: center;
   }
 
