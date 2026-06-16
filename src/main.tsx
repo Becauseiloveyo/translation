@@ -9,6 +9,7 @@ import "./styles/product-ui.css";
 import "./styles/app-upgrades.css";
 import "./styles/dictionary-manager-polish.css";
 import "./styles/mobile-fixes.css";
+import "./styles/dark-visual-balance.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
