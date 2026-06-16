@@ -100,7 +100,15 @@ const EXPANDED_HEADWORDS = [
   "important",
   "common",
   "core",
-  "basic"
+  "basic",
+  "auto",
+  "automatic",
+  "automation",
+  "automobile",
+  "autocomplete",
+  "autofill",
+  "autoplay",
+  "autopilot"
 ];
 
 export const STATIC_DICTIONARY_SOURCES: StaticDictionarySource[] = [
