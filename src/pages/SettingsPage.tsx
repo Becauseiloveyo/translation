@@ -1,13 +1,13 @@
 import { Download, PlugZap, Plus, Save, Trash2, Upload } from "lucide-react";
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { AppSelect, AppSelectOption } from "../components/AppSelect";
+import { DictionaryManagerCard } from "../components/DictionaryManagerCard";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/PageHeader";
 import { createDictionaryProvider, canUseRemoteDictionaryProvider } from "../services/dictionary/remoteDictionaryProviders";
-import { parseUserDictionaryImport } from "../services/dictionary/userDictionaryImport";
-import { addDictionaryImport, importStoreBackup, resetStore, upsertProvider } from "../services/storage/localStore";
+import { importStoreBackup, resetStore, upsertProvider } from "../services/storage/localStore";
 import { PageProps } from "../types/app";
-import { ApiProvider, AppSettings, FontMode, ProviderPurpose, ProviderType, UserDictionary } from "../types/models";
+import { ApiProvider, AppSettings, FontMode, ProviderPurpose, ProviderType } from "../types/models";
 import { createId, nowIso } from "../utils/id";
 import { downloadTextFile } from "../utils/text";
 
@@ -80,23 +80,12 @@ export function SettingsPage({ store, setStore }: PageProps) {
   const [providerForm, setProviderForm] = useState<ProviderForm>(emptyProviderForm);
   const [testMessage, setTestMessage] = useState("");
   const [backupMessage, setBackupMessage] = useState("");
-  const [dictionaryMessage, setDictionaryMessage] = useState("");
   const [showAdvancedProviders, setShowAdvancedProviders] = useState(false);
 
   const sortedProviders = useMemo(
     () => [...store.apiProviders].sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name)),
     [store.apiProviders]
   );
-
-  const dictionaryStats = useMemo(() => {
-    const enabledIds = new Set(store.userDictionaries.filter((dictionary) => dictionary.enabled).map((dictionary) => dictionary.id));
-    return {
-      dictionaries: store.userDictionaries.length,
-      enabled: enabledIds.size,
-      entries: store.dictionaryEntries.length,
-      enabledEntries: store.dictionaryEntries.filter((entry) => !entry.dictionaryId || enabledIds.has(entry.dictionaryId)).length
-    };
-  }, [store.userDictionaries, store.dictionaryEntries]);
 
   const enabledTranslateProvider = sortedProviders.find((provider) => provider.enabled && provider.useFor.includes("translate") && provider.type !== "mock");
   const enabledDictionaryProvider = sortedProviders.find((provider) => provider.enabled && provider.useFor.includes("dictionary") && provider.type !== "mock");
@@ -126,48 +115,13 @@ export function SettingsPage({ store, setStore }: PageProps) {
     try {
       const text = await file.text();
       const next = importStoreBackup(text);
-      setStore(next);
+      setStore(() => next);
       setBackupMessage("备份已恢复。当前页面数据已经替换为导入内容。 ");
     } catch {
       setBackupMessage("备份恢复失败。请确认选择的是 LiteDict 导出的 JSON 文件。 ");
     } finally {
       event.target.value = "";
     }
-  }
-
-  async function importUserDictionary(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    try {
-      const text = await file.text();
-      const parsed = parseUserDictionaryImport(file.name, text);
-      setStore((current) => addDictionaryImport(current, parsed.userDictionary, parsed.entries, parsed.importRecord, parsed.source));
-      setDictionaryMessage(`已导入 ${parsed.userDictionary.name}，共 ${parsed.entries.length} 个词条。`);
-    } catch (caught) {
-      setDictionaryMessage(toFriendlySettingsError(caught));
-    } finally {
-      event.target.value = "";
-    }
-  }
-
-  function toggleDictionary(dictionary: UserDictionary) {
-    setStore((current) => ({
-      ...current,
-      userDictionaries: current.userDictionaries.map((item) =>
-        item.id === dictionary.id ? { ...item, enabled: !item.enabled, updatedAt: nowIso() } : item
-      )
-    }));
-  }
-
-  function deleteDictionary(dictionary: UserDictionary) {
-    setStore((current) => ({
-      ...current,
-      userDictionaries: current.userDictionaries.filter((item) => item.id !== dictionary.id),
-      dictionaryEntries: current.dictionaryEntries.filter((entry) => entry.dictionaryId !== dictionary.id),
-      dictionarySources: current.dictionarySources.filter((source) => source.name !== dictionary.name)
-    }));
   }
 
   function applyProviderType(typeValue: string) {
@@ -296,7 +250,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
         eyebrow="Settings"
         title="我的与设置"
         actions={
-          <button className="button danger" type="button" onClick={() => setStore(resetStore())}>
+          <button className="button danger" type="button" onClick={() => setStore(() => resetStore())}>
             重置本地数据
           </button>
         }
@@ -342,50 +296,7 @@ export function SettingsPage({ store, setStore }: PageProps) {
         </div>
       </div>
 
-      <section className="panel pad stack settings-card dictionary-manager-card">
-        <div className="item-head">
-          <div>
-            <div className="panel-title">本地词库</div>
-            <div className="muted small">支持 CSV、TSV、JSON。导入后会参与查词、候选词和备份。</div>
-          </div>
-          <label className="button primary" htmlFor="dictionary-import-file">
-            <Upload size={16} aria-hidden="true" />
-            导入词库
-          </label>
-          <input id="dictionary-import-file" className="hidden-file" type="file" accept=".csv,.tsv,.json,text/csv,application/json" onChange={importUserDictionary} />
-        </div>
-        <div className="provider-status-grid">
-          <DictionaryStat title="词库" value={`${dictionaryStats.enabled}/${dictionaryStats.dictionaries}`} detail="启用 / 全部" />
-          <DictionaryStat title="词条" value={`${dictionaryStats.enabledEntries}`} detail={`总计 ${dictionaryStats.entries}`} />
-        </div>
-        {dictionaryMessage ? <div className="notice">{dictionaryMessage}</div> : null}
-        {store.userDictionaries.length ? (
-          <div className="dictionary-manager-list">
-            {store.userDictionaries.map((dictionary) => (
-              <div className="dictionary-manager-item" key={dictionary.id}>
-                <div className="item-head">
-                  <div>
-                    <div className="item-title">{dictionary.name}</div>
-                    <div className="muted small">
-                      {dictionary.entryCount} 词条 · {dictionary.sourceType ?? "local"} · {dictionary.language}
-                    </div>
-                  </div>
-                  <div className="row">
-                    <button className={dictionary.enabled ? "chip-button active" : "chip-button"} type="button" onClick={() => toggleDictionary(dictionary)}>
-                      {dictionary.enabled ? "已启用" : "已停用"}
-                    </button>
-                    <button className="button icon danger" type="button" onClick={() => deleteDictionary(dictionary)} title="删除词库">
-                      <Trash2 size={16} aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyState title="暂无外接词库" body="导入 CSV/TSV/JSON 后，会自动加入查词候选和本地优先查词。" />
-        )}
-      </section>
+      <DictionaryManagerCard store={store} setStore={setStore} />
 
       <section className="panel pad stack provider-summary-card">
         <div className="item-head">
@@ -553,16 +464,6 @@ function ProviderStatus({ title, provider, fallback }: { title: string; provider
       <span>{title}</span>
       <strong>{provider?.name ?? fallback}</strong>
       <small>{provider ? `${provider.type} · 已启用` : "默认可用"}</small>
-    </div>
-  );
-}
-
-function DictionaryStat({ title, value, detail }: { title: string; value: string; detail: string }) {
-  return (
-    <div className="provider-status-card">
-      <span>{title}</span>
-      <strong>{value}</strong>
-      <small>{detail}</small>
     </div>
   );
 }
