@@ -1,30 +1,36 @@
 import { AppStore, DictionaryEntry } from "../../types/models";
 
+type RankedEntry = {
+  entry: DictionaryEntry;
+  priority: number;
+};
+
 export function buildEnabledLocalDictionaryIndex(store: AppStore): Map<string, DictionaryEntry[]> {
   const enabledDictionaries = [...store.userDictionaries]
     .filter((dictionary) => dictionary.enabled)
     .sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100) || a.name.localeCompare(b.name));
   const priorityByDictionaryId = new Map(enabledDictionaries.map((dictionary, index) => [dictionary.id, index]));
-  const index = new Map<string, DictionaryEntry[]>();
+  const rankedIndex = new Map<string, RankedEntry[]>();
 
   for (const entry of store.dictionaryEntries) {
     if (entry.dictionaryId && !priorityByDictionaryId.has(entry.dictionaryId)) {
       continue;
     }
     const priority = entry.dictionaryId ? priorityByDictionaryId.get(entry.dictionaryId) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
-    const bucket = index.get(entry.normalizedHeadword) ?? [];
-    bucket.push({ ...entry, note: entry.note ?? `priority:${priority}` });
-    index.set(entry.normalizedHeadword, bucket);
+    const bucket = rankedIndex.get(entry.normalizedHeadword) ?? [];
+    bucket.push({ entry, priority });
+    rankedIndex.set(entry.normalizedHeadword, bucket);
   }
 
-  for (const bucket of index.values()) {
-    bucket.sort((a, b) => entryPriority(a) - entryPriority(b));
+  const result = new Map<string, DictionaryEntry[]>();
+  for (const [headword, bucket] of rankedIndex.entries()) {
+    result.set(
+      headword,
+      bucket
+        .sort((a, b) => a.priority - b.priority)
+        .map((item) => item.entry)
+    );
   }
 
-  return index;
-}
-
-function entryPriority(entry: DictionaryEntry): number {
-  const match = entry.note?.match(/priority:(\d+)/);
-  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+  return result;
 }
