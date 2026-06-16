@@ -279,7 +279,7 @@ function normalizeStore(parsed: Partial<AppStore>, fallback: AppStore): AppStore
     history: parsed.history ?? [],
     dictionarySources: parsed.dictionarySources ?? [],
     dictionaryImports: parsed.dictionaryImports ?? [],
-    userDictionaries: parsed.userDictionaries ?? [],
+    userDictionaries: normalizeUserDictionaries(parsed.userDictionaries ?? []),
     dictionaryEntries: parsed.dictionaryEntries ?? []
   };
 }
@@ -292,4 +292,11 @@ function mergeDefaultProviders(savedProviders: ApiProvider[] | undefined, defaul
   const savedIds = new Set(savedProviders.map((provider) => provider.id));
   const missingDefaults = defaultProviders.filter((provider) => !savedIds.has(provider.id));
   return [...savedProviders, ...missingDefaults];
+}
+
+function normalizeUserDictionaries(dictionaries: UserDictionary[]): UserDictionary[] {
+  return dictionaries.map((dictionary, index) => ({
+    ...dictionary,
+    priority: dictionary.priority ?? (index + 1) * 10
+  }));
 }
