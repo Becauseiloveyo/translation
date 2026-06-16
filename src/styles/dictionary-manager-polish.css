@@ -25,6 +25,30 @@
   min-height: 38px;
 }
 
+.dictionary-result-meta {
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.dictionary-relation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.relation-card .mature-quick-row {
+  margin-top: 8px;
+}
+
+.vocab-meta-line {
+  margin-top: 4px;
+  font-weight: 760;
+}
+
+.vocabulary-list-panel .link-button {
+  text-align: left;
+}
+
 @media (max-width: 560px) {
   .dictionary-import-preview,
   .dictionary-manager-item {
@@ -47,5 +71,9 @@
   .dictionary-manager-item .chip-button,
   .dictionary-import-preview .button {
     justify-content: center;
+  }
+
+  .dictionary-relation-grid {
+    grid-template-columns: 1fr;
   }
 }
