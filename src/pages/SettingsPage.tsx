@@ -1,15 +1,16 @@
-import { Download, PlugZap, Plus, Save, Trash2, Upload } from "lucide-react";
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { PlugZap, Plus, Save, Trash2 } from "lucide-react";
+import { FormEvent, useMemo, useState } from "react";
 import { AppSelect, AppSelectOption } from "../components/AppSelect";
+import { BackupRestoreCard } from "../components/BackupRestoreCard";
 import { DictionaryManagerCard } from "../components/DictionaryManagerCard";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/PageHeader";
+import { ReleasePreflightCard } from "../components/ReleasePreflightCard";
 import { createDictionaryProvider, canUseRemoteDictionaryProvider } from "../services/dictionary/remoteDictionaryProviders";
-import { importStoreBackup, resetStore, upsertProvider } from "../services/storage/localStore";
+import { resetStore, upsertProvider } from "../services/storage/localStore";
 import { PageProps } from "../types/app";
 import { ApiProvider, AppSettings, FontMode, ProviderPurpose, ProviderType } from "../types/models";
 import { createId, nowIso } from "../utils/id";
-import { downloadTextFile } from "../utils/text";
 
 type ProviderForm = {
   id?: string;
@@ -79,7 +80,6 @@ const enabledOptions: AppSelectOption[] = [
 export function SettingsPage({ store, setStore }: PageProps) {
   const [providerForm, setProviderForm] = useState<ProviderForm>(emptyProviderForm);
   const [testMessage, setTestMessage] = useState("");
-  const [backupMessage, setBackupMessage] = useState("");
   const [showAdvancedProviders, setShowAdvancedProviders] = useState(false);
 
   const sortedProviders = useMemo(
@@ -98,30 +98,6 @@ export function SettingsPage({ store, setStore }: PageProps) {
         [key]: value
       }
     }));
-  }
-
-  function exportBackup() {
-    const exportedAt = new Date().toISOString();
-    const backup = JSON.stringify({ ...store, exportedAt, app: "LiteDict" }, null, 2);
-    downloadTextFile(`litedict-backup-${exportedAt.slice(0, 10)}.json`, backup, "application/json;charset=utf-8");
-    setBackupMessage("完整备份已导出。它包含设置、Provider、词汇本、历史、词典数据。请妥善保存。 ");
-  }
-
-  async function importBackup(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    try {
-      const text = await file.text();
-      const next = importStoreBackup(text);
-      setStore(() => next);
-      setBackupMessage("备份已恢复。当前页面数据已经替换为导入内容。 ");
-    } catch {
-      setBackupMessage("备份恢复失败。请确认选择的是 LiteDict 导出的 JSON 文件。 ");
-    } finally {
-      event.target.value = "";
-    }
   }
 
   function applyProviderType(typeValue: string) {
@@ -275,28 +251,11 @@ export function SettingsPage({ store, setStore }: PageProps) {
           </div>
         </div>
 
-        <div className="panel pad stack settings-card backup-card">
-          <div>
-            <div className="panel-title">备份与恢复</div>
-            <div className="muted small">完整备份包含词汇本、历史、Provider、设置和导入词典。</div>
-          </div>
-          <div className="backup-actions">
-            <button className="button primary" type="button" onClick={exportBackup}>
-              <Download size={16} aria-hidden="true" />
-              导出完整备份
-            </button>
-            <label className="button" htmlFor="settings-backup-import">
-              <Upload size={16} aria-hidden="true" />
-              恢复备份
-            </label>
-            <input id="settings-backup-import" className="hidden-file" type="file" accept=".json,application/json" onChange={importBackup} />
-          </div>
-          {backupMessage ? <div className="notice">{backupMessage}</div> : null}
-          <div className="notice">API key 只保存在本地应用数据和你导出的备份文件中，不要公开分享备份。</div>
-        </div>
+        <BackupRestoreCard store={store} setStore={setStore} />
       </div>
 
       <DictionaryManagerCard store={store} setStore={setStore} />
+      <ReleasePreflightCard store={store} />
 
       <section className="panel pad stack provider-summary-card">
         <div className="item-head">
