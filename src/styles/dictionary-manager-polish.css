@@ -1,0 +1,51 @@
+.dictionary-import-preview {
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(37, 99, 235, 0.12), transparent 160px),
+    rgba(248, 250, 252, 0.94);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dictionary-import-preview .app-select-trigger {
+  background: rgba(255, 255, 255, 0.86) !important;
+  border: 0 !important;
+}
+
+.dictionary-manager-item .row,
+.dictionary-import-preview .row {
+  flex-wrap: wrap;
+}
+
+.dictionary-manager-item .button,
+.dictionary-manager-item .chip-button {
+  min-height: 38px;
+}
+
+@media (max-width: 560px) {
+  .dictionary-import-preview,
+  .dictionary-manager-item {
+    border-radius: 20px;
+  }
+
+  .dictionary-manager-item .item-head,
+  .dictionary-import-preview .item-head {
+    align-items: stretch;
+  }
+
+  .dictionary-manager-item .row,
+  .dictionary-import-preview .row {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dictionary-manager-item .button,
+  .dictionary-manager-item .chip-button,
+  .dictionary-import-preview .button {
+    justify-content: center;
+  }
+}
