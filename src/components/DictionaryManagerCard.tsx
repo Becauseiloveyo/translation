@@ -1,4 +1,4 @@
-import { Trash2, Upload } from "lucide-react";
+import { Download, Trash2, Upload } from "lucide-react";
 import { ChangeEvent, Dispatch, SetStateAction, useMemo, useState } from "react";
 import { AppSelect, AppSelectOption } from "./AppSelect";
 import { EmptyState } from "./EmptyState";
@@ -6,6 +6,7 @@ import { parseUserDictionaryImport, ParsedUserDictionaryImport } from "../servic
 import { addDictionaryImport } from "../services/storage/localStore";
 import { AppStore, DictionaryEntry, UserDictionary } from "../types/models";
 import { createId, nowIso } from "../utils/id";
+import { downloadTextFile, escapeCsv } from "../utils/text";
 
 type DictionaryConflictMode = "keep" | "skip" | "replace" | "merge";
 
@@ -54,6 +55,38 @@ export function DictionaryManagerCard({ store, setStore }: DictionaryManagerCard
     } finally {
       event.target.value = "";
     }
+  }
+
+  function downloadCsvTemplate() {
+    const rows = [
+      ["word", "translation", "phonetic", "pos", "definition", "example"],
+      ["apple", "苹果", "ˈæpl", "n.", "a round fruit", "I eat an apple every day."],
+      ["request", "请求；要求", "rɪˈkwest", "n./v.", "an act of asking for something", "The app sends a request."],
+      ["translate", "翻译", "trænzˈleɪt", "v.", "to change words into another language", "Please translate this sentence."]
+    ];
+    downloadTextFile("litedict-dictionary-template.csv", rows.map((row) => row.map(escapeCsv).join(",")).join("\n"), "text/csv;charset=utf-8");
+  }
+
+  function downloadJsonTemplate() {
+    const template = [
+      {
+        word: "apple",
+        translation: "苹果",
+        phonetic: "ˈæpl",
+        pos: "n.",
+        definition: "a round fruit",
+        example: "I eat an apple every day."
+      },
+      {
+        word: "request",
+        translation: "请求；要求",
+        phonetic: "rɪˈkwest",
+        pos: "n./v.",
+        definition: "an act of asking for something",
+        example: "The app sends a request."
+      }
+    ];
+    downloadTextFile("litedict-dictionary-template.json", JSON.stringify(template, null, 2), "application/json;charset=utf-8");
   }
 
   function confirmImport() {
@@ -121,12 +154,24 @@ export function DictionaryManagerCard({ store, setStore }: DictionaryManagerCard
           <div className="panel-title">本地词库</div>
           <div className="muted small">支持 CSV、TSV、JSON。导入前先预览，启用词库会参与查词和候选。</div>
         </div>
-        <label className="button primary" htmlFor="dictionary-import-file">
-          <Upload size={16} aria-hidden="true" />
-          导入词库
-        </label>
+        <div className="row">
+          <button className="button" type="button" onClick={downloadCsvTemplate}>
+            <Download size={16} aria-hidden="true" />
+            CSV 模板
+          </button>
+          <button className="button" type="button" onClick={downloadJsonTemplate}>
+            <Download size={16} aria-hidden="true" />
+            JSON 模板
+          </button>
+          <label className="button primary" htmlFor="dictionary-import-file">
+            <Upload size={16} aria-hidden="true" />
+            导入词库
+          </label>
+        </div>
         <input id="dictionary-import-file" className="hidden-file" type="file" accept=".csv,.tsv,.json,text/csv,application/json" onChange={importUserDictionary} />
       </div>
+
+      <div className="notice">字段：word/headword、translation、phonetic、pos、definition、example。CSV 第一行建议保留表头。</div>
 
       <div className="provider-status-grid">
         <DictionaryStat title="词库" value={`${stats.enabled}/${stats.dictionaries}`} detail="启用 / 全部" />
