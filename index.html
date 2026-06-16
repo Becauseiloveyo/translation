@@ -3,6 +3,54 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f6f8fb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d1626" media="(prefers-color-scheme: dark)" />
+    <style>
+      html,
+      body,
+      #root {
+        min-height: 100%;
+        margin: 0;
+      }
+
+      html {
+        background: #f6f8fb;
+      }
+
+      body {
+        background: #f6f8fb;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background: #0d1626;
+        }
+      }
+
+      html.dark,
+      html.dark body {
+        background: #0d1626;
+      }
+    </style>
+    <script>
+      (function () {
+        try {
+          var raw = window.localStorage.getItem("litedict.v1.store");
+          var theme = raw ? JSON.parse(raw).settings && JSON.parse(raw).settings.theme : "system";
+          var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var useDark = theme === "dark" || ((theme === "system" || !theme) && prefersDark);
+          document.documentElement.classList.toggle("dark", !!useDark);
+          document.documentElement.style.backgroundColor = useDark ? "#0d1626" : "#f6f8fb";
+        } catch (error) {
+          if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            document.documentElement.classList.add("dark");
+            document.documentElement.style.backgroundColor = "#0d1626";
+          }
+        }
+      })();
+    </script>
     <title>LiteDict</title>
   </head>
   <body>
