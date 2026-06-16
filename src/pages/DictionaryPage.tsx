@@ -3,9 +3,10 @@ import { FormEvent, useMemo, useState } from "react";
 import { EmptyState } from "../components/EmptyState";
 import { PageKey } from "../components/AppShell";
 import { lookupDictionary } from "../services/dictionary/localDictionaryProvider";
+import { translateWithProvider } from "../services/providers/registry";
 import { addRecentLookup, upsertVocabulary } from "../services/storage/localStore";
 import { PageProps } from "../types/app";
-import { DictionaryEntry } from "../types/models";
+import { Definition, DictionaryEntry } from "../types/models";
 import { createId, nowIso } from "../utils/id";
 
 type DictionaryPageProps = PageProps & {
@@ -43,12 +44,34 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
         setError("没有找到这个单词。可以检查拼写，或换成原形再查。");
         return;
       }
-      setEntry(result);
-      setStore((current) => addRecentLookup(current, { text: result.headword, kind: "word" }));
+      const localized = await localizeEntry(result);
+      setEntry(localized);
+      setStore((current) => addRecentLookup(current, { text: localized.headword, kind: "word" }));
     } catch (caught) {
       setError(toFriendlyLookupError(caught));
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function localizeEntry(result: DictionaryEntry): Promise<DictionaryEntry> {
+    const definitions = await Promise.all(result.definitions.map((definition, index) => localizeDefinition(definition, index)));
+    return { ...result, definitions };
+  }
+
+  async function localizeDefinition(definition: Definition, index: number): Promise<Definition> {
+    if (definition.definitionZh || !definition.definitionEn || index > 5) {
+      return definition;
+    }
+    try {
+      const translated = await translateWithProvider(store, {
+        text: definition.definitionEn,
+        sourceLang: "en",
+        targetLang: "zh"
+      });
+      return { ...definition, definitionZh: translated.output.translatedText };
+    } catch {
+      return definition;
     }
   }
 
@@ -64,7 +87,7 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
         id: existed?.id ?? createId("vocab"),
         word: entry.headword,
         translation: first?.definitionZh ?? first?.definitionEn,
-        note: entry.source ? `来自 ${entry.source}` : undefined,
+        note: entry.source ? `来自 ${sourceLabel(entry.source)}` : undefined,
         status: existed?.status ?? "new",
         reviewCount: existed?.reviewCount ?? 0,
         masteredCount: existed?.masteredCount ?? 0,
@@ -157,24 +180,14 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
               <div>
                 <div className="word-title">{entry.headword}</div>
                 <div className="phonetic-row">
-                  {entry.phoneticUS ? (
-                    <button className="chip-button" type="button" onClick={() => playPronunciation("en-US")} title="播放美式发音">
-                      US {entry.phoneticUS}
-                      <Volume2 size={14} aria-hidden="true" />
-                    </button>
-                  ) : null}
-                  {entry.phoneticUK ? (
-                    <button className="chip-button" type="button" onClick={() => playPronunciation("en-GB")} title="播放英式发音">
-                      UK {entry.phoneticUK}
-                      <Volume2 size={14} aria-hidden="true" />
-                    </button>
-                  ) : null}
-                  {!entry.phoneticUS && !entry.phoneticUK ? (
-                    <button className="chip-button" type="button" onClick={() => playPronunciation("en-US")} title="使用系统发音">
-                      发音
-                      <Volume2 size={14} aria-hidden="true" />
-                    </button>
-                  ) : null}
+                  <button className="chip-button" type="button" onClick={() => playPronunciation("en-US")} title="播放美式发音">
+                    美式 {entry.phoneticUS ?? fallbackPhonetic(entry.headword)}
+                    <Volume2 size={14} aria-hidden="true" />
+                  </button>
+                  <button className="chip-button" type="button" onClick={() => playPronunciation("en-GB")} title="播放英式发音">
+                    英式 {entry.phoneticUK ?? entry.phoneticUS ?? fallbackPhonetic(entry.headword)}
+                    <Volume2 size={14} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
               <button className="button" type="button" onClick={addToVocabulary}>
@@ -187,13 +200,12 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
               {entry.definitions.map((definition) => (
                 <section className="definition-card" key={definition.id}>
                   <div className="definition-meta">
-                    {definition.partOfSpeech ? <span className="chip">{definition.partOfSpeech}</span> : null}
-                    {definition.source ? <span className="chip">{definition.source}</span> : null}
+                    {definition.partOfSpeech ? <span className="chip">{partOfSpeechLabel(definition.partOfSpeech)}</span> : null}
+                    {definition.source ? <span className="chip">{sourceLabel(definition.source)}</span> : null}
                   </div>
-                  {definition.definitionZh ? <p className="definition-zh">{definition.definitionZh}</p> : null}
-                  {definition.definitionEn ? <p className="definition-en">{definition.definitionEn}</p> : null}
-                  {definition.exampleEn ? <p className="example">{definition.exampleEn}</p> : null}
-                  {definition.exampleZh ? <p className="example muted">{definition.exampleZh}</p> : null}
+                  {definition.definitionZh ? <p className="definition-zh">{definition.definitionZh}</p> : <p className="definition-zh">{definition.definitionEn}</p>}
+                  {definition.definitionZh && definition.definitionEn ? <p className="definition-en muted">{definition.definitionEn}</p> : null}
+                  {definition.exampleZh ? <p className="example muted">{definition.exampleZh}</p> : definition.exampleEn ? <p className="example muted">例句：{definition.exampleEn}</p> : null}
                 </section>
               ))}
             </div>
@@ -274,6 +286,39 @@ function levenshtein(a: string, b: string): number {
     }
   }
   return rows[a.length][b.length];
+}
+
+function partOfSpeechLabel(value: string): string {
+  const normalized = value.toLocaleLowerCase();
+  const labels: Record<string, string> = {
+    noun: "名词",
+    verb: "动词",
+    adjective: "形容词",
+    adverb: "副词",
+    pronoun: "代词",
+    preposition: "介词",
+    conjunction: "连词",
+    interjection: "感叹词",
+    entry: "词条"
+  };
+  return labels[normalized] ?? value;
+}
+
+function sourceLabel(value: string): string {
+  if (/free dictionary/i.test(value)) {
+    return "免费词典";
+  }
+  if (/merriam/i.test(value)) {
+    return "韦氏词典";
+  }
+  if (/oxford/i.test(value)) {
+    return "牛津词典";
+  }
+  return value;
+}
+
+function fallbackPhonetic(word: string): string {
+  return `/${word}/`;
 }
 
 function toFriendlyLookupError(caught: unknown): string {
