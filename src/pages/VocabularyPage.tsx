@@ -1,4 +1,4 @@
-import { CheckCircle2, Download, Plus, RotateCcw, Save, Search, Trash2, Upload } from "lucide-react";
+import { BookOpen, CheckCircle2, Download, Plus, RotateCcw, Save, Search, Trash2, Upload } from "lucide-react";
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { AppSelect } from "../components/AppSelect";
 import { EmptyState } from "../components/EmptyState";
@@ -15,6 +15,10 @@ type VocabularyForm = {
   translation: string;
   note: string;
   status: VocabularyStatus;
+};
+
+type VocabularyPageProps = PageProps & {
+  onLookup?: (word: string) => void;
 };
 
 const emptyForm: VocabularyForm = {
@@ -38,7 +42,7 @@ const statusOptions = [
 
 type FilterValue = "all" | VocabularyStatus;
 
-export function VocabularyPage({ store, setStore }: PageProps) {
+export function VocabularyPage({ store, setStore, onLookup }: VocabularyPageProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterValue>("all");
   const [form, setForm] = useState<VocabularyForm>(emptyForm);
@@ -58,8 +62,8 @@ export function VocabularyPage({ store, setStore }: PageProps) {
     const lower = query.trim().toLocaleLowerCase();
     return store.vocabulary.filter((item) => {
       const matchFilter = filter === "all" || item.status === filter;
-      const matchQuery =
-        !lower || [item.word, item.translation, item.note].filter(Boolean).some((value) => value!.toLocaleLowerCase().includes(lower));
+      const searchable = [item.word, item.translation, item.note, item.phonetic, item.partOfSpeech, item.source, item.definitionEn].filter(Boolean);
+      const matchQuery = !lower || searchable.some((value) => value!.toLocaleLowerCase().includes(lower));
       return matchFilter && matchQuery;
     });
   }, [filter, query, store.vocabulary]);
@@ -82,6 +86,11 @@ export function VocabularyPage({ store, setStore }: PageProps) {
       word: form.word.trim(),
       translation: form.translation.trim() || undefined,
       note: form.note.trim() || undefined,
+      phonetic: existing?.phonetic,
+      partOfSpeech: existing?.partOfSpeech,
+      source: existing?.source,
+      definitionEn: existing?.definitionEn,
+      example: existing?.example,
       status: form.status,
       reviewCount: existing?.reviewCount ?? 0,
       masteredCount: existing?.masteredCount ?? 0,
@@ -133,11 +142,16 @@ export function VocabularyPage({ store, setStore }: PageProps) {
 
   function exportCsv() {
     const rows = [
-      ["word", "translation", "note", "status", "reviewCount", "masteredCount", "lastReviewedAt", "nextReviewAt"],
+      ["word", "translation", "note", "phonetic", "partOfSpeech", "source", "definitionEn", "example", "status", "reviewCount", "masteredCount", "lastReviewedAt", "nextReviewAt"],
       ...store.vocabulary.map((item) => [
         item.word,
         item.translation ?? "",
         item.note ?? "",
+        item.phonetic ?? "",
+        item.partOfSpeech ?? "",
+        item.source ?? "",
+        item.definitionEn ?? "",
+        item.example ?? "",
         item.status,
         String(item.reviewCount ?? 0),
         String(item.masteredCount ?? 0),
@@ -170,6 +184,11 @@ export function VocabularyPage({ store, setStore }: PageProps) {
           word: row.word.trim(),
           translation: row.translation || undefined,
           note: row.note || undefined,
+          phonetic: row.phonetic || undefined,
+          partOfSpeech: row.partOfSpeech || undefined,
+          source: row.source || undefined,
+          definitionEn: row.definitionEn || undefined,
+          example: row.example || undefined,
           status,
           reviewCount: Number(row.reviewCount || 0),
           masteredCount: Number(row.masteredCount || 0),
@@ -225,7 +244,10 @@ export function VocabularyPage({ store, setStore }: PageProps) {
             <div className="study-card">
               <div>
                 <div className="word-title">{studyItem.word}</div>
+                <VocabularyMeta item={studyItem} />
                 <div className="study-translation">{studyItem.translation || "还没有释义"}</div>
+                {studyItem.definitionEn ? <p className="definition-en muted">{studyItem.definitionEn}</p> : null}
+                {studyItem.example ? <p className="example muted">例句：{studyItem.example}</p> : null}
                 <div className="review-meta">
                   <span>复习 {studyItem.reviewCount ?? 0} 次</span>
                   <span>连续认识 {studyItem.masteredCount ?? 0} 次</span>
@@ -234,6 +256,10 @@ export function VocabularyPage({ store, setStore }: PageProps) {
                 {studyItem.note ? <p className="muted">{studyItem.note}</p> : null}
               </div>
               <div className="study-card-actions review-actions">
+                <button className="button" type="button" onClick={() => onLookup?.(studyItem.word)}>
+                  <BookOpen size={16} aria-hidden="true" />
+                  查词
+                </button>
                 <button className="button" type="button" onClick={() => reviewItem(studyItem, false)}>
                   <RotateCcw size={16} aria-hidden="true" />
                   不认识
@@ -264,31 +290,15 @@ export function VocabularyPage({ store, setStore }: PageProps) {
               <label htmlFor="vocab-word">单词 / 短语</label>
               <input id="vocab-word" className="input" value={form.word} onChange={(event) => setForm({ ...form, word: event.target.value })} />
             </div>
-            <AppSelect
-              label="状态"
-              value={form.status}
-              options={statusOptions}
-              onChange={(value) => setForm({ ...form, status: value as VocabularyStatus })}
-            />
+            <AppSelect label="状态" value={form.status} options={statusOptions} onChange={(value) => setForm({ ...form, status: value as VocabularyStatus })} />
           </div>
           <div className="field">
             <label htmlFor="vocab-translation">释义</label>
-            <input
-              id="vocab-translation"
-              className="input"
-              value={form.translation}
-              onChange={(event) => setForm({ ...form, translation: event.target.value })}
-            />
+            <input id="vocab-translation" className="input" value={form.translation} onChange={(event) => setForm({ ...form, translation: event.target.value })} />
           </div>
           <div className="field">
             <label htmlFor="vocab-note">笔记</label>
-            <textarea
-              id="vocab-note"
-              className="textarea"
-              value={form.note}
-              onChange={(event) => setForm({ ...form, note: event.target.value })}
-              style={{ minHeight: 84 }}
-            />
+            <textarea id="vocab-note" className="textarea" value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} style={{ minHeight: 84 }} />
           </div>
           <button className="button primary" type="submit">
             <Save size={16} aria-hidden="true" />
@@ -301,7 +311,7 @@ export function VocabularyPage({ store, setStore }: PageProps) {
         <div className="panel-header">
           <div>
             <div className="panel-title">词条列表</div>
-            <div className="muted small">点击词条可以编辑</div>
+            <div className="muted small">编辑词条，或直接回到查词页查看完整释义。</div>
           </div>
           <span className="chip">{filtered.length}</span>
         </div>
@@ -326,10 +336,14 @@ export function VocabularyPage({ store, setStore }: PageProps) {
                   <button className="link-button" type="button" onClick={() => setForm(toForm(item))}>
                     <div className="item-title">{item.word}</div>
                     <div className="muted small">{item.translation}</div>
+                    <VocabularyMeta item={item} />
                   </button>
                   <div className="row">
                     <span className="chip">{statusLabels[item.status]}</span>
                     <span className="chip">{formatReviewDue(item, today)}</span>
+                    <button className="button icon" type="button" onClick={() => onLookup?.(item.word)} title="查词">
+                      <BookOpen size={16} aria-hidden="true" />
+                    </button>
                     <button className="button icon" type="button" onClick={() => updateStatus(item, "new")} title="重置为新词">
                       <RotateCcw size={16} aria-hidden="true" />
                     </button>
@@ -359,6 +373,14 @@ function MiniStat({ label, value }: { label: string; value: number }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function VocabularyMeta({ item }: { item: VocabularyItem }) {
+  const parts = [item.phonetic, item.partOfSpeech, item.source].filter(Boolean);
+  if (!parts.length) {
+    return null;
+  }
+  return <div className="muted small vocab-meta-line">{parts.join(" · ")}</div>;
 }
 
 function toForm(item: VocabularyItem): VocabularyForm {
