@@ -1,5 +1,5 @@
 import { Languages, Search, Star, Volume2 } from "lucide-react";
-import { FormEvent, KeyboardEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { EmptyState } from "../components/EmptyState";
 import { PageKey } from "../components/AppShell";
 import { lookupDictionary } from "../services/dictionary/localDictionaryProvider";
@@ -21,7 +21,6 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
   const [entry, setEntry] = useState<DictionaryEntry | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const queryKind = useMemo(() => getQueryKind(query), [query]);
   const recentWords = useMemo(() => store.recentLookups.filter((item) => item.kind === "word").slice(0, 6), [store.recentLookups]);
   const suggestionSeedWords = useMemo(
@@ -38,26 +37,6 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
   async function handleLookup(event: FormEvent) {
     event.preventDefault();
     await runLookup(query);
-  }
-
-  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (!suggestions.length) {
-      return;
-    }
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActiveSuggestionIndex((index) => Math.min(index + 1, suggestions.length - 1));
-      return;
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActiveSuggestionIndex((index) => Math.max(index - 1, 0));
-      return;
-    }
-    if (event.key === "Enter" && suggestions[activeSuggestionIndex]) {
-      event.preventDefault();
-      applyQuickWord(suggestions[activeSuggestionIndex]);
-    }
   }
 
   async function runLookup(nextQuery: string) {
@@ -131,13 +110,7 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
 
   function applyQuickWord(word: string) {
     setQuery(word);
-    setActiveSuggestionIndex(0);
     void runLookup(word);
-  }
-
-  function updateQuery(value: string) {
-    setQuery(value);
-    setActiveSuggestionIndex(0);
   }
 
   function playPronunciation(locale: "en-US" | "en-GB") {
@@ -173,10 +146,14 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
             <input
               id="dictionary-query"
               value={query}
-              onChange={(event) => updateQuery(event.target.value)}
-              onKeyDown={handleSearchKeyDown}
+              onChange={(event) => setQuery(event.target.value)}
               placeholder="输入单词"
               autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="text"
+              enterKeyHint="search"
             />
             <button type="submit" disabled={isLoading || !query.trim()}>
               {isLoading ? "查询中" : "查词"}
@@ -184,17 +161,9 @@ export function DictionaryPage({ store, setStore, onNavigate }: DictionaryPagePr
           </form>
 
           {suggestions.length ? (
-            <div className="dictionary-suggestion-panel" role="listbox" aria-label="候选词">
+            <div className="dictionary-suggestion-panel" aria-label="候选词">
               {suggestions.map((word, index) => (
-                <button
-                  className={index === activeSuggestionIndex ? "suggestion-item active" : "suggestion-item"}
-                  type="button"
-                  key={word}
-                  role="option"
-                  aria-selected={index === activeSuggestionIndex}
-                  onMouseEnter={() => setActiveSuggestionIndex(index)}
-                  onClick={() => applyQuickWord(word)}
-                >
+                <button className={index === 0 ? "suggestion-item active" : "suggestion-item"} type="button" key={word} onClick={() => applyQuickWord(word)}>
                   <span>{word}</span>
                   <small>{index === 0 ? "最可能" : "候选"}</small>
                 </button>
