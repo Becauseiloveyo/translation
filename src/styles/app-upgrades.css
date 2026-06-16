@@ -1,4 +1,17 @@
 /* Experience upgrades: app-style translate, review flow, suggestions, backup. */
+:root {
+  --app-font: Roboto, "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --system-font: var(--app-font);
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--app-font) !important;
+}
+
 .app-translate-page {
   min-height: 100%;
 }
@@ -188,6 +201,24 @@
 }
 
 @media (max-width: 980px) {
+  .mature-page-hero {
+    display: none !important;
+  }
+
+  .page-header {
+    min-height: 0 !important;
+    margin: 0 0 10px !important;
+    justify-content: flex-end !important;
+  }
+
+  .page-header > div:first-child {
+    display: none !important;
+  }
+
+  .page-header .page-actions {
+    margin-left: auto;
+  }
+
   .translate-app-shell {
     gap: 12px;
   }
