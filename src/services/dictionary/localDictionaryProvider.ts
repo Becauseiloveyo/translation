@@ -3,6 +3,7 @@ import { normalizeHeadword } from "../../utils/text";
 import { lookupBuiltinEnglishChineseDictionary } from "./builtinEnglishChineseDictionary";
 import { MockDictionaryProvider } from "./mockDictionaryProvider";
 import { canUseRemoteDictionaryProvider, createDictionaryProvider, enabledDictionaryProviders } from "./remoteDictionaryProviders";
+import { buildLookupForms } from "./wordForms";
 
 export async function lookupDictionary(store: AppStore, text: string): Promise<DictionaryEntry | null> {
   const normalized = normalizeHeadword(text);
@@ -10,14 +11,20 @@ export async function lookupDictionary(store: AppStore, text: string): Promise<D
     return null;
   }
 
-  const local = lookupLocalDictionary(store, normalized);
-  if (local) {
-    return local;
+  const lookupForms = buildLookupForms(normalized);
+
+  for (const form of lookupForms) {
+    const local = lookupLocalDictionary(store, form);
+    if (local) {
+      return local;
+    }
   }
 
-  const builtin = lookupBuiltinEnglishChineseDictionary(text);
-  if (builtin) {
-    return builtin;
+  for (const form of lookupForms) {
+    const builtin = lookupBuiltinEnglishChineseDictionary(form);
+    if (builtin) {
+      return builtin;
+    }
   }
 
   const remote = await lookupRemoteDictionaries(store, text);
