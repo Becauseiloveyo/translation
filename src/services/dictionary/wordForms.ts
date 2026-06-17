@@ -29,6 +29,14 @@ export function buildLookupForms(text: string): string[] {
     addStemForms(forms, normalized.slice(0, -2));
   }
 
+  if (normalized.endsWith("er") && normalized.length > 4) {
+    addStemForms(forms, normalized.slice(0, -2));
+  }
+
+  if (normalized.endsWith("or") && normalized.length > 4) {
+    addStemForms(forms, normalized.slice(0, -2));
+  }
+
   if (normalized.endsWith("es") && normalized.length > 4) {
     const stem = normalized.slice(0, -2);
     addForm(forms, stem);
