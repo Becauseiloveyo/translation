@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../components/EmptyState";
 import { PageKey } from "../components/AppShell";
 import { lookupDictionary } from "../services/dictionary/localDictionaryProvider";
+import { playEnglishPronunciation } from "../services/dictionary/pronunciationAudio";
 import { suggestDictionaryWords } from "../services/dictionary/dictionarySuggestions";
 import { translateWithProvider } from "../services/providers/registry";
 import { addRecentLookup, upsertVocabulary } from "../services/storage/localStore";
@@ -22,6 +23,7 @@ export function DictionaryPage({ store, setStore, onNavigate, initialQuery }: Di
   const [query, setQuery] = useState("");
   const [entry, setEntry] = useState<DictionaryEntry | null>(null);
   const [error, setError] = useState("");
+  const [pronunciationMessage, setPronunciationMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const queryKind = useMemo(() => getQueryKind(query), [query]);
   const recentWords = useMemo(() => store.recentLookups.filter((item) => item.kind === "word").slice(0, 6), [store.recentLookups]);
@@ -59,6 +61,7 @@ export function DictionaryPage({ store, setStore, onNavigate, initialQuery }: Di
 
   async function runLookup(nextQuery: string) {
     setError("");
+    setPronunciationMessage("");
     setEntry(null);
     const trimmed = nextQuery.trim();
     if (!trimmed) {
@@ -136,17 +139,16 @@ export function DictionaryPage({ store, setStore, onNavigate, initialQuery }: Di
     void runLookup(word);
   }
 
-  function playPronunciation(locale: "en-US" | "en-GB") {
+  async function playPronunciation(locale: "en-US" | "en-GB") {
     if (!entry) {
       return;
     }
+    setPronunciationMessage("");
     const audioUrl = locale === "en-US" ? entry.audioUS ?? entry.audioUK : entry.audioUK ?? entry.audioUS;
-    if (audioUrl) {
-      const audio = new Audio(audioUrl);
-      void audio.play().catch(() => speakWord(entry.headword, locale));
-      return;
+    const played = await playEnglishPronunciation(entry.headword, locale, [audioUrl]);
+    if (!played) {
+      setPronunciationMessage("当前设备或网络没有可用发音。可以检查系统 TTS 或网络后再试。 ");
     }
-    speakWord(entry.headword, locale);
   }
 
   return (
@@ -224,15 +226,16 @@ export function DictionaryPage({ store, setStore, onNavigate, initialQuery }: Di
                   {savedVocabulary ? <span className="chip good">已在词汇本</span> : null}
                 </div>
                 <div className="phonetic-row">
-                  <button className="chip-button" type="button" onClick={() => playPronunciation("en-US")} title="播放美式发音">
-                    美式 {entry.phoneticUS ?? fallbackPhonetic(entry.headword)}
+                  <button className="chip-button" type="button" onClick={() => void playPronunciation("en-US")} title="播放美式发音">
+                    美式 {entry.phoneticUS ?? "发音"}
                     <Volume2 size={14} aria-hidden="true" />
                   </button>
-                  <button className="chip-button" type="button" onClick={() => playPronunciation("en-GB")} title="播放英式发音">
-                    英式 {entry.phoneticUK ?? entry.phoneticUS ?? fallbackPhonetic(entry.headword)}
+                  <button className="chip-button" type="button" onClick={() => void playPronunciation("en-GB")} title="播放英式发音">
+                    英式 {entry.phoneticUK ?? entry.phoneticUS ?? "发音"}
                     <Volume2 size={14} aria-hidden="true" />
                   </button>
                 </div>
+                {pronunciationMessage ? <div className="notice pronunciation-notice">{pronunciationMessage}</div> : null}
               </div>
               <button className={savedVocabulary ? "button ghost-button" : "button"} type="button" onClick={addToVocabulary}>
                 <Star size={16} aria-hidden="true" />
@@ -282,17 +285,6 @@ function WordRelation({ title, words, onSelect }: { title: string; words: string
   );
 }
 
-function speakWord(word: string, locale: "en-US" | "en-GB") {
-  if (!("speechSynthesis" in window)) {
-    return;
-  }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(word);
-  utterance.lang = locale;
-  utterance.rate = 0.9;
-  window.speechSynthesis.speak(utterance);
-}
-
 function getQueryKind(query: string) {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -318,10 +310,6 @@ function sourceLabel(value: string): string {
     return "牛津词典";
   }
   return value;
-}
-
-function fallbackPhonetic(word: string): string {
-  return `/${word}/`;
 }
 
 function toFriendlyLookupError(caught: unknown): string {
