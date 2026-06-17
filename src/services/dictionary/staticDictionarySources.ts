@@ -2,6 +2,7 @@ import { DictionaryEntry } from "../../types/models";
 import { lookupBuiltinEnglishChineseDictionary } from "./builtinEnglishChineseDictionary";
 import { lookupCommonEnglishChineseDictionary, getCommonDictionaryHeadwords } from "./commonEnglishChineseDictionary";
 import { lookupExpandedEnglishChineseDictionary } from "./expandedEnglishChineseDictionary";
+import { getSupplementalDictionaryHeadwords, lookupSupplementalEnglishChineseDictionary } from "./supplementalEnglishChineseDictionary";
 
 export type StaticDictionarySource = {
   id: string;
@@ -123,6 +124,12 @@ export const STATIC_DICTIONARY_SOURCES: StaticDictionarySource[] = [
     label: "扩展中英词库",
     lookup: lookupExpandedEnglishChineseDictionary,
     getHeadwords: () => EXPANDED_HEADWORDS
+  },
+  {
+    id: "supplemental-en-zh",
+    label: "补充中英词库",
+    lookup: lookupSupplementalEnglishChineseDictionary,
+    getHeadwords: getSupplementalDictionaryHeadwords
   },
   {
     id: "common-en-zh",
