@@ -1,5 +1,5 @@
 import { DictionaryEntry } from "../../types/models";
-import { createId, nowIso } from "../../utils/id";
+import { nowIso } from "../../utils/id";
 import { normalizeHeadword } from "../../utils/text";
 import { DictionaryProvider, LookupInput } from "../providers/types";
 
@@ -48,35 +48,18 @@ export class MockDictionaryProvider implements DictionaryProvider {
     }
 
     const seeded = seedDefinitions[normalized];
-    if (seeded) {
-      return {
-        ...seeded,
-        id: `mock_${normalized}`,
-        normalizedHeadword: normalized,
-        language: input.sourceLang ?? "en",
-        source: this.name,
-        createdAt: nowIso(),
-        updatedAt: nowIso()
-      };
+    if (!seeded) {
+      return null;
     }
 
     return {
-      id: createId("mock_entry"),
-      headword: input.text.trim(),
+      ...seeded,
+      id: `mock_${normalized}`,
       normalizedHeadword: normalized,
       language: input.sourceLang ?? "en",
-      definitions: [
-        {
-          id: createId("mock_def"),
-          partOfSpeech: "mock",
-          definitionZh: `“${input.text.trim()}” 的模拟词典释义。导入本地词典后会优先显示真实的个人词典结果。`,
-          definitionEn: `Mock dictionary definition for "${input.text.trim()}".`
-        }
-      ],
       source: this.name,
       createdAt: nowIso(),
       updatedAt: nowIso()
     };
   }
 }
-
